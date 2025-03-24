@@ -9,7 +9,6 @@
 # testing
 /coverage
 /markdown
-
 # production
 /build
 
@@ -26,3 +25,5 @@ yarn-error.log*
 .env*.local
 .env
 #
+# Key
+serviceAccountKey.json

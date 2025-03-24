@@ -2,11 +2,8 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
     {
-        _id: { type: String, required: true, unique: true },
-        displayName: { type: String, required: true },
-        photoURL: { type: String },
-        email: { type: String },
-        emailVerified: { type: Boolean },
+        _id: { type: String, required: true },
+        userData: { textData: { type: String, required: false }, cloudinaryUrl: { type: String, required: false } },
         uid: { type: String, required: true },
     },
     { timestamps: true } // Thêm createdAt, updatedAt tự động
