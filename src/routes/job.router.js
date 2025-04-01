@@ -1,0 +1,13 @@
+const express = require("express");
+const router = express.Router();
+const jobController = require("../controllers/job.controller");
+
+// Định nghĩa các API
+router.post("/", jobController.createJob);
+router.get("/", jobController.getJobs);
+router.get("/:id", jobController.getJobById);
+router.put("/:id", jobController.updateJob);
+router.delete("/:id", jobController.deleteJob);
+router.post("/search", jobController.searchJobs);
+
+module.exports = router;

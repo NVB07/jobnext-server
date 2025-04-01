@@ -8,7 +8,7 @@ const path = require("path");
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
 const fileManager = new GoogleAIFileManager(apiKey);
-const prompt = `This is the resume of the job applicant. Please parse and convert to a well-structured JSON format with the following labels. Put into the "cvLabel" object:
+const prompt = `This is the resume of the job applicant. Please parse and convert to a well-structured JSON format with the following labels. Include in the "cvLabel" object:
 
 "Address": the address you want to work at (only take the Province unit, usually the address on the CV will be the work address)
 
@@ -20,37 +20,38 @@ const prompt = `This is the resume of the job applicant. Please parse and conver
 
 "Job_position": The position you are applying for.
 
-"Career_objectives": A short string describing the candidate's career goals.
+"Career_objective": A short string describing the candidate's career objective.
 
-"Work_experience": The work duration and the series list jobs from most recent to most distant, each job includes: Company name, Job title, Duration of employment, Brief description of Responsibilities and Achievements, combined into a single series.
+"Work_Experience": Work duration and list of jobs from most recent to most distant, each job includes: Company name, Job title, Working duration, Brief description of Responsibilities and Achievements, combined into a single string, number of years of experience (calculate the number of years of work experience yourself, note that the number of years of work experience in a field is the time of starting work at a company or business).
 
-"Projects": The series lists projects worked on including project name, company, technology or tools used, and position within the project.
+"Projects": List of projects done including project name, company, technology or tools used and position in the project.
 
-"Education_qualifications": The series lists educational qualifications, each entry includes: School name, Major, Degree, Duration of study, GPA (if applicable), combined into a single series.
+"Education_qualifications": List of educational qualifications, each item includes: School name, Major, Degree, Study duration, GPA (if any), combined into a single string.
 
-"Skills": The series lists technical and soft skills, not divided into separate groups.
+"Skills": List of technical and soft skills, not divided into separate groups.
 
-"Achievements_awards": The series lists notable achievements and awards (if applicable).
+"Achievements_awards": A string listing notable achievements and awards (if any).
 
-"Extracurricular_activities": String listing extracurricular activities related to the job (if any).
+"Extracurricular_activities": A string listing extracurricular activities related to the job (if any).
 
-"References": String providing reference information.
+"References": A string providing reference information.
 
-Also, add a "review" field outside of "cvLabel" containing a short text in English (US) summarizing the candidate's key information such as name, address, position applied for, skills, degrees or certificates, awards so I can easily match it to the job description (JD).
+Also, please add a "review" field outside of "cvLabel" that contains a short text in US English summarizing the candidate's key information such as name, address, position applied for, skills, experience, degrees or certifications, awards so I can easily match it to the job description (JD).
 
 ##Requirements:
 
 - Combine relevant information into a single string for each key label in "cvLabel".
 
 - If there is no label data, leave the value as null
+- The "review" field must not be missing any skills.
 
-- Only return JSON results and do not add any explanatory text.
+- Return only JSON results and do not add any explanatory text.
 
-- Absolutely do not create your own data, data should only be taken from the CV provided!
+- Never create your own data, data should only be taken from the CV provided!
 
 - output data keeps the original language of the CV, except "review" is in US English
 
-Output format sample:
+Output format template:
 {
 "cvLabel": {
 "Personal_information": "Nguyen Van A, born in 2000",
@@ -62,12 +63,12 @@ Output format sample:
 "Work_experience": "3 years of experience working with nodejs. XYZ Company, Software Engineer, January 2020 - Present.",
 "Projects": programming a map application at ABC company with a programming interface position using Reactjs.",
 "Education_qualifications": "ABC University, Bachelor of Computer Science, 2016-2020, GPA 3.8...",
-"Skills": "JavaScript, React, Node.js, Communications, Teamwork.",
-"Achievements_awards": "Best Employee of the Year 2022 at XYZ Company.",
-"Extracurricular_activities": "Volunteer to teach programming to local students.",
+"Skills": "JavaScript, React, Node.js, Communication, Teamwork.",
+"Achievements": "Best Employee of the Year 2022 at XYZ Company.",
+"Extracurricular_activities": "Volunteering to teach programming to local students.",
 "References": null
 },
-"review": "Candidate Nguyen Van A, born in 2000, lives in Hanoi, graduated from university with GPA 3.8, applying for programmer position, has 3 years of experience with nodejs, has worked with reactjs, skills in JavaScript, React, Node.js, Communications, Teamwork, has experience as a programmer at ABC company,..."
+"Evaluation": "Candidate Nguyen Van A, born in 2000, lives in Hanoi, graduated from university with a GPA of 3.8, applying for a programmer position, has 3 years of experience with nodejs, has worked with reactjs, has skills in JavaScript, React, Node.js, Communication, Teamwork, has experience as a programmer at ABC company,..."
 }`;
 
 // Cấu hình model

@@ -4,6 +4,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const cron = require("node-cron");
 const { deleteUnverifiedUsers } = require("./lib/deleteUser");
+const { initializeModel } = require("./lib/matchJobNLP");
 const cloudinary = require("cloudinary").v2;
 
 cron.schedule("*/10 * * * *", async () => {
@@ -27,5 +28,8 @@ app.use(morgan("dev")); // Log request
 // Import routes
 const routes = require("./routes");
 app.use(routes);
-
+(async () => {
+    await initializeModel();
+    console.log("Ứng dụng đã sẵn sàng!");
+})();
 module.exports = app;
