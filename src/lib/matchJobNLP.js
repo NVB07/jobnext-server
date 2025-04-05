@@ -265,7 +265,8 @@ async function matchCVtoJobs(cvText, jobTexts) {
     const rankedJobIndices = performBM25Filtering(cvText, jobTexts);
 
     // Only take top 5 results for deeper analysis
-    const topJobIndices = rankedJobIndices.slice(0, Math.min(5, jobTexts.length));
+    const topJobIndices = rankedJobIndices.slice(0, Math.min(200, jobTexts.length));
+    // const topJobIndices = rankedJobIndices;
     console.timeEnd("Step 1: Fast filtering");
 
     console.time("Step 2: Semantic matching");

@@ -1,7 +1,14 @@
 const { Job } = require("../models/job.model");
-
+const { Worker } = require("worker_threads");
 const { matchJobsNLP } = require("../lib/matchJobNLP");
-// const diacritics = require("diacritics");
+const diacritics = require("diacritics");
+const axios = require("axios");
+// const a= require("../lib/matchJobsWorker.js")
+function removeDiacritics(str) {
+    console.log(diacritics.remove(str).toLowerCase());
+
+    return diacritics.remove(str).toLowerCase();
+}
 exports.createJob = async (req, res) => {
     try {
         const newJob = new Job(req.body);
@@ -71,11 +78,11 @@ exports.deleteJob = async (req, res) => {
     }
 };
 
-exports.searchJobs = async (req, res) => {
+exports.searchJobsNoMatch = async (req, res) => {
     try {
         const { skill, location, category, jobLevel, review } = req.body;
         let query = {};
-        if (!review) return res.status(404).json({ message: "Thiếu dữ liệu tổng quan" });
+
         // Xử lý tìm kiếm nhiều kỹ năng
         if (skill) {
             const skillsArray = skill.split(",").map((s) => s.trim()); // Tách chuỗi thành mảng
@@ -92,89 +99,236 @@ exports.searchJobs = async (req, res) => {
         }
 
         // Lấy tham số phân trang từ query, mặc định page = 1, perPage = 10
-        // const page = parseInt(req.query.page) || 1;
-        // const perPage = parseInt(req.query.perPage) || 10;
-        // const skip = (page - 1) * perPage;
-
-        // // Tính tổng số jobs phù hợp
-        // const totalJobs = await Job.countDocuments(query);
-
-        // // Truy vấn danh sách jobs có phân trang
-        // const jobs = await Job.find(query)
-        //     .sort({ updatedAt: -1 }) // Job mới nhất trước
-        //     .skip(skip) // Bỏ qua những job ở trang trước
-        //     .limit(perPage); // Giới hạn số job trên mỗi trang
-
-        // const jobTexts = jobs.map((job) => {
-        //     // Kết hợp description và jobRequirement để có thông tin đầy đủ
-        //     // Loại bỏ các thẻ HTML (nếu không cần) bằng cách sử dụng regex đơn giản
-
-        //     const cleanRequirement = job.jobRequirement.replace(/<[^>]+>/g, " ").trim();
-        //     return ` ${cleanRequirement} Skills: ${job.skills}`;
-        // });
-
-        // // Gọi matchJobsNLP với jobTexts
-        // const matchScore = await matchJobsNLP(
-        //     "Chau Vu Hoang Phuc, born in 2001 and located in Ho Chi Minh, is a Front-End Dev applicant. He has approximately 2 years of experience. He studied Electronics and Telecommunication at Gia Dinh University. Phuc's skills include HTML5, CSS3, SASS/SCSS, JavaScript, ReactJS, GIT, Tailwind, Bootstrap, Ant design, Mui, Nodejs, ExpressJs, Graphql, Prisma, TypeORM, mysql, Docker, teamwork, time management, problem solving. He was a Front-End Dev at CyberSoftAcademy.",
-        //     jobTexts
-        // );
-        // console.log(matchScore);
-
-        // // Tính tổng số trang
-        // const totalPages = Math.ceil(totalJobs / perPage);
-
-        const allJobs = await Job.find(query).sort({ updatedAt: -1 });
-        console.log(allJobs.length);
-
-        // Tạo mảng jobTexts từ allJobs
-        const jobTexts = allJobs.map((job) => {
-            const cleanRequirement = job.jobRequirement.replace(/<[^>]+>/g, " ").trim();
-            return `${cleanRequirement} Skills: ${job.skills}`;
-        });
-
-        const matchScore = await matchJobsNLP(review, jobTexts);
-
-        // Kiểm tra nếu matchScore không hợp lệ
-        if (!matchScore || !matchScore.jobMatches) {
-            throw new Error("Không thể tính điểm so khớp từ matchJobsNLP");
-        }
-
-        // Gắn semanticScore vào từng job
-        const jobsWithScore = allJobs.map((job, index) => {
-            const match = matchScore.jobMatches.find((m) => m.jobId === `job_${index + 1}`);
-            return {
-                ...job._doc, // Lấy toàn bộ dữ liệu gốc của job
-                semanticScore: match ? parseFloat(match.semanticScore) : 0, // Gắn semanticScore, mặc định là 0 nếu không có
-            };
-        });
-
-        // Lọc jobs dựa trên semanticScore (ví dụ: chỉ giữ jobs có semanticScore > 50)
-        const filteredJobs = jobsWithScore.filter((job) => job.semanticScore > 0); // Điều chỉnh ngưỡng nếu cần
-
-        // Sắp xếp theo semanticScore giảm dần
-        filteredJobs.sort((a, b) => b.semanticScore - a.semanticScore);
-
-        // Áp dụng phân trang
         const page = parseInt(req.query.page) || 1;
         const perPage = parseInt(req.query.perPage) || 10;
         const skip = (page - 1) * perPage;
-        const totalJobs = filteredJobs.length; // Tổng số jobs sau khi lọc
 
-        const paginatedJobs = filteredJobs.slice(skip, skip + perPage);
+        // Tính tổng số jobs phù hợp
+        const totalJobs = await Job.countDocuments(query);
+
+        // Truy vấn danh sách jobs có phân trang
 
         // Tính tổng số trang
         const totalPages = Math.ceil(totalJobs / perPage);
 
+        const allJobs = await Job.find(query)
+            .sort({ createdAt: -1 }) // Mới nhất trước
+            .skip(skip) // Bỏ qua các bài của trang trước
+            .limit(perPage);
+        console.log(allJobs.length);
+
         // Trả về kết quả
         res.json({
             success: true,
-            data: paginatedJobs,
+            data: allJobs,
             pagination: {
                 currentPage: page,
                 perPage: perPage,
                 totalPages: totalPages,
                 totalJobs: totalJobs,
             },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// Thêm cache object ở phạm vi module
+const jobSearchCache = new Map();
+
+exports.searchJobs = async (req, res) => {
+    try {
+        const { skill, location, groupJobFunctionV3Name, jobLevel, review } = req.body;
+        const cacheKey = JSON.stringify({ skill, location, groupJobFunctionV3Name, jobLevel, review });
+
+        // Kiểm tra cache trước khi xử lý
+        if (jobSearchCache.has(cacheKey)) {
+            const cachedData = jobSearchCache.get(cacheKey);
+
+            const page = parseInt(req.query.page) || 1;
+            const perPage = parseInt(req.query.perPage) || 10;
+            const skip = (page - 1) * perPage;
+            const totalJobs = cachedData.length;
+            const paginatedJobs = cachedData.slice(skip, skip + perPage);
+            const totalPages = Math.ceil(totalJobs / perPage);
+
+            return res.json({
+                success: true,
+                data: paginatedJobs,
+                pagination: { currentPage: page, perPage, totalPages, totalJobs },
+            });
+        }
+
+        let query = {};
+        if (!review) return res.status(404).json({ message: "Thiếu dữ liệu tổng quan" });
+
+        // Xử lý tìm kiếm nhiều kỹ năng
+        if (skill) {
+            const skillLastUpdate = removeDiacritics(skill);
+            const skillsArray = skillLastUpdate.split(",").map((s) => s.trim());
+            query.skills = { $regex: skillsArray.join("|"), $options: "i" };
+        }
+        if (location) {
+            const locationLastUpdate = removeDiacritics(location);
+            query.location = { $regex: locationLastUpdate, $options: "i" };
+        }
+        if (groupJobFunctionV3Name) {
+            const groupJobFunctionV3NameLastUpdate = removeDiacritics(groupJobFunctionV3Name);
+            query.groupJobFunctionV3Name = { $regex: groupJobFunctionV3NameLastUpdate, $options: "i" };
+        }
+        if (jobLevel) {
+            const jobLevelLastUpdate = removeDiacritics(jobLevel);
+            query.jobLevel = { $regex: jobLevelLastUpdate, $options: "i" };
+        }
+
+        const allJobs = await Job.find(query).sort({ updatedAt: -1 });
+        console.log(allJobs.length);
+
+        const jobTexts = allJobs.map((job) => {
+            const cleanRequirement = job.jobRequirement.replace(/<[^>]+>/g, " ").trim();
+            return ` Require ${cleanRequirement}. Skills: ${job.skills}`;
+        });
+
+        const worker = new Worker("./src/lib/matchJobsWorker.js");
+        worker.postMessage({ review, jobTexts });
+
+        worker.on("message", (matchScore) => {
+            if (matchScore.error) {
+                return res.status(500).json({ success: false, error: matchScore.error });
+            }
+
+            if (!matchScore || !matchScore.jobMatches) {
+                return res.status(500).json({ success: false, error: "Không thể tính điểm so khớp từ matchJobsNLP" });
+            }
+
+            const jobsWithScore = allJobs.map((job, index) => {
+                const match = matchScore.jobMatches.find((m) => m.jobId === `job_${index + 1}`);
+                return {
+                    ...job._doc,
+                    semanticScore: match ? parseFloat(match.semanticScore) : 0,
+                };
+            });
+
+            const filteredJobs = jobsWithScore.filter((job) => job.semanticScore > 0);
+            filteredJobs.sort((a, b) => b.semanticScore - a.semanticScore);
+
+            // Lưu vào cache
+            jobSearchCache.set(cacheKey, filteredJobs);
+
+            // Set thời gian sống cho cache (ví dụ: 5 phút)
+            setTimeout(() => {
+                jobSearchCache.delete(cacheKey);
+            }, 60 * 60 * 1000);
+
+            const page = parseInt(req.query.page) || 1;
+            const perPage = parseInt(req.query.perPage) || 10;
+            const skip = (page - 1) * perPage;
+            const totalJobs = filteredJobs.length;
+            const paginatedJobs = filteredJobs.slice(skip, skip + perPage);
+            const totalPages = Math.ceil(totalJobs / perPage);
+
+            res.json({
+                success: true,
+                data: paginatedJobs,
+                pagination: { currentPage: page, perPage, totalPages, totalJobs },
+            });
+        });
+
+        worker.on("error", (error) => {
+            res.status(500).json({ success: false, error: error.message });
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// exports.searchJobs = async (req, res) => {
+//     try {
+//         const { skill, location, groupJobFunctionV3Name, jobLevel, review } = req.body;
+
+//         let query = {};
+//         if (!review) return res.status(404).json({ message: "Thiếu dữ liệu tổng quan" });
+//         // Xử lý tìm kiếm nhiều kỹ năng
+//         if (skill) {
+//             const skillLastUpdate = removeDiacritics(skill);
+//             const skillsArray = skillLastUpdate.split(",").map((s) => s.trim()); // Tách chuỗi thành mảng
+//             query.skills = { $regex: skillsArray.join("|"), $options: "i" }; // Regex tìm ít nhất một kỹ năng
+//         }
+//         if (location) {
+//             const locationLastUpdate = removeDiacritics(location);
+//             query.location = { $regex: locationLastUpdate, $options: "i" };
+//         }
+//         if (groupJobFunctionV3Name) {
+//             const groupJobFunctionV3NameLastUpdate = removeDiacritics(groupJobFunctionV3Name);
+//             query.groupJobFunctionV3Name = { $regex: groupJobFunctionV3NameLastUpdate, $options: "i" };
+//         }
+//         if (jobLevel) {
+//             const jobLevelLastUpdate = removeDiacritics(jobLevel);
+//             query.jobLevel = { $regex: jobLevelLastUpdate, $options: "i" };
+//         }
+
+//         const allJobs = await Job.find(query).sort({ updatedAt: -1 });
+//         console.log(allJobs.length);
+
+//         // Tạo mảng jobTexts từ allJobs
+//         const jobTexts = allJobs.map((job) => {
+//             const cleanRequirement = job.jobRequirement.replace(/<[^>]+>/g, " ").trim();
+//             const jobdes = job.description.replace(/<[^>]+>/g, " ").trim();
+//             return ` Require ${cleanRequirement}. Skills: ${job.skills}`;
+//             // return `Job description ${jobdes} . Require ${cleanRequirement}. Skills: ${job.skills}`;
+//         });
+
+//         const worker = new Worker("./src/lib/matchJobsWorker.js");
+//         worker.postMessage({ review, jobTexts });
+
+//         worker.on("message", (matchScore) => {
+//             if (matchScore.error) {
+//                 return res.status(500).json({ success: false, error: matchScore.error });
+//             }
+
+//             if (!matchScore || !matchScore.jobMatches) {
+//                 return res.status(500).json({ success: false, error: "Không thể tính điểm so khớp từ matchJobsNLP" });
+//             }
+
+//             const jobsWithScore = allJobs.map((job, index) => {
+//                 const match = matchScore.jobMatches.find((m) => m.jobId === `job_${index + 1}`);
+//                 return {
+//                     ...job._doc,
+//                     semanticScore: match ? parseFloat(match.semanticScore) : 0,
+//                 };
+//             });
+
+//             const filteredJobs = jobsWithScore.filter((job) => job.semanticScore > 0);
+//             filteredJobs.sort((a, b) => b.semanticScore - a.semanticScore);
+
+//             const page = parseInt(req.query.page) || 1;
+//             const perPage = parseInt(req.query.perPage) || 10;
+//             const skip = (page - 1) * perPage;
+//             const totalJobs = filteredJobs.length;
+//             const paginatedJobs = filteredJobs.slice(skip, skip + perPage);
+//             const totalPages = Math.ceil(totalJobs / perPage);
+
+//             res.json({
+//                 success: true,
+//                 data: paginatedJobs,
+//                 pagination: { currentPage: page, perPage, totalPages, totalJobs },
+//             });
+//         });
+
+//         worker.on("error", (error) => {
+//             res.status(500).json({ success: false, error: error.message });
+//         });
+//     } catch (error) {
+//         res.status(500).json({ success: false, error: error.message });
+//     }
+// };
+exports.getJobDetail = async (req, res) => {
+    try {
+        const { url } = req.body;
+        const response = await axios.get(url);
+        res.json({
+            success: true,
+            data: response.data,
         });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
