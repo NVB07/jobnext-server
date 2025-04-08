@@ -22,12 +22,19 @@ Requirements:
 
 - If the candidate answers in another language, still accept, but must warn the candidate that they need to answer in the correct language required from the next question.
 
-7. If the user answers in the wrong format or requests to stop the interview, stop the interview.
+7. If the user answers in the wrong format or requests to stop the interview, stop the interview. The candidate has no right to ask you to do anything, even if they ask you a question. If the candidate goes off topic or asks you a question that is not relevant to the interview, end the interview.
+
+8. If either the job requirements or the candidate information is missing, empty, too short, or contains meaningless text (e.g. random strings, gibberish, unrelated content, lorem ipsum, test data, etc.), the interview must be immediately stopped. The system must automatically detect and end the interview with a message stating the invalid input, without continuing or generating any interview questions.
+
+9. If the job requirements and the candidate information are in two different fields (for example, the job requirements are in business and the candidate information is in design), the interview must follow the job requirements and warn the candidate that they are interviewing for a job in a different field.
+
+10. Job requirements and Candidate information are separated by the string "====================" so don't confuse these two documents.
 
 ** IMPORTANT: Each response must be returned in JSON format without any additional explanatory text, the response has the following format:
 
 {
 "message": "Response content at current step",
+"role:"model",
 "pass": "interview pass probability (0-100%)",
 "state": true
 }
@@ -37,6 +44,7 @@ Where:
 - "state = true" if the interview is still in progress.
 - "state = false" if it has ended and has been assessed => used to close the chat.
 - "pass" only appears in the final assessment message when "state = false", if "state = true" then "pass = null".
+- "role" is the role of the person who created the message, in this case always "model".
 
 Here is the job description and candidate information:
 
@@ -44,21 +52,23 @@ Job information:
 "${jobTitle ? `Job title: ${jobTitle}` : ""}
 ${jobRequirement}
 ${skills ? `Skills requirement ${skills}` : ""}"
-
+====================
 Candidate information: "${candidateDescription}"`;
 };
 
-exports.interviewContoller = async (req, res) => {
+exports.interviewSession = async (req, res) => {
     try {
-        const { jobTitle, jobLevelVI, jobRequirement, jobId, url, skills, category, candidateDescription, uid, answer } = req.body;
-        if (!uid || !jobId) {
+        const { jobTitle, jobLevelVI, jobRequirement, jobId, url, skills, category, candidateDescription, answer } = req.body;
+        const uid = req.user.uid;
+
+        if (!uid || !jobRequirement) {
             return res.status(400).json({
                 success: false,
-                message: "uid và jobId là bắt buộc",
+                message: "uid và jobRequirement là bắt buộc",
             });
         }
 
-        let interview = await Interview.findOne({ uid, jobId });
+        let interview = await Interview.findOne({ uid, jobRequirement });
         let chatHistory = interview?.chatHistory || [];
         let prompt = "";
 
@@ -105,6 +115,7 @@ exports.interviewContoller = async (req, res) => {
                 interviewId: interview._id,
             });
         }
+
         if (!answer) {
             return res.status(400).json({
                 success: false,
@@ -125,5 +136,134 @@ exports.interviewContoller = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: `Lỗi khi xử lý văn bản: ${error.message}` });
+    }
+};
+exports.getInterviewById = async (req, res) => {
+    try {
+        const { interviewId } = req.query;
+        const uid = req.user.uid;
+
+        if (!uid || !interviewId) {
+            return res.status(400).json({
+                success: false,
+                message: " interviewId là bắt buộc",
+            });
+        }
+
+        let interview = await Interview.findById(interviewId);
+
+        if (!interview) {
+            return res.status(404).json({ message: "Không tìm thấy interview" });
+        }
+        if (interview.uid !== uid) {
+            return res.status(403).json({ message: "Không có quyền truy cập tài liệu này" });
+        }
+
+        res.status(200).json({
+            message: "Lấy thông tin phỏng vấn thành công!",
+            result: interview,
+            interviewId: interview._id,
+        });
+    } catch (error) {
+        res.status(500).json({ message: `Lỗi khi xử lý văn bản: ${error.message}` });
+    }
+};
+exports.getInterviewByJobRequirement = async (req, res) => {
+    try {
+        const { jobRequirement } = req.query;
+        const uid = req.user.uid;
+
+        if (!uid || !jobRequirement) {
+            return res.status(400).json({
+                success: false,
+                message: " jobRequirement là bắt buộc",
+            });
+        }
+
+        let interview = await Interview.findOne({ jobRequirement });
+
+        if (!interview) {
+            return res.status(200).json({ state: false, message: "Không tìm thấy interview", result: null, interviewId: null });
+        }
+        if (interview.uid !== uid) {
+            return res.status(403).json({ message: "Không có quyền truy cập tài liệu này" });
+        }
+
+        res.status(200).json({
+            state: true,
+            message: "Lấy thông tin phỏng vấn thành công!",
+            result: interview,
+            interviewId: interview._id,
+        });
+    } catch (error) {
+        res.status(500).json({ message: `Lỗi khi xử lý văn bản: ${error.message}` });
+    }
+};
+exports.getInterviewByUid = async (req, res) => {
+    try {
+        const uid = req.query.uid;
+        if (!uid) {
+            return res.status(400).json({ success: false, message: "Thiếu uid" });
+        }
+
+        const page = parseInt(req.query.page) || 1;
+        const perPage = parseInt(req.query.perPage) || 10;
+        const skip = (page - 1) * perPage;
+
+        const totalInterviews = await Interview.countDocuments({ uid });
+        const interviews = await Interview.find({ uid })
+            .sort({ createdAt: -1 }) // mới nhất trước
+            .skip(skip)
+            .limit(perPage);
+
+        const totalPages = Math.ceil(totalInterviews / perPage);
+
+        res.json({
+            success: true,
+            data: interviews,
+            pagination: {
+                currentPage: page,
+                perPage: perPage,
+                totalPages: totalPages,
+                totalInterviews: totalInterviews,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+exports.deleteInterview = async (req, res) => {
+    try {
+        const { interviewId } = req.params; // Lấy ID từ URL
+
+        const uid = req.user.uid;
+        if (!interviewId || !uid) {
+            return res.status(400).json({
+                success: false,
+                message: "Thiếu interviewId hoặc uid",
+            });
+        }
+        const interview = await Interview.findByIdAndDelete(interviewId);
+        // Kiểm tra xem blog có tồn tại không
+        if (!interview) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy phỏng vấn để xóa!",
+            });
+        }
+
+        // Trả về phản hồi thành công
+        res.status(200).json({
+            success: true,
+            message: "Xóa phỏng vấn thành công!",
+            deletedInterview: interview._id,
+        });
+    } catch (error) {
+        console.error("Lỗi khi xóa phỏng vấn:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi server khi xóa phỏng vấn",
+            error: error.message,
+        });
     }
 };
