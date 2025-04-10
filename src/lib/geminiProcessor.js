@@ -114,10 +114,7 @@ Additionally, please include a "review" field outside of the "cvLabel" that cont
 - If there is no label data, leave the value null
 - The "review" field must not be missing any skills.
 
-- The "Rank" field must contain only one of the following values: "Intern/Student",
-"Fresher/Entry level", "Experienced (non-manager)",
-"Manager",
-"Director and above".
+- The "Rank" field must contain only one of the following values: "Intern/Student", "Fresher/Entry level", "Experienced (non-manager)", "Manager", "Director and above".
 - "Industry" field includes only 1 of the following values: "Academic/Education", "Accounting/Auditing", "Administration/Office Support", "Agriculture/Livestock/Fishery", "Architecture/Construction", "Art, Media & Printing/Publishing", "Banking & Financial Services", "CEO & General Management", "Customer Service", "Design", "Engineering & Sciences", "Food and Beverage", "Government/NGO", "Healthcare/Medical Services", "Hospitality/Tourism", "Human Resources/Recruitment", "Information Technology/Telecommunications", "Insurance", "Legal", "Logistics/Import Export/Warehouse", "Manufacturing", "Marketing, Advertising/Communications", "Pharmacy", "Real Estate", "Retail/Consumer Products", "Sales", "Technician", "Textiles, Garments/Footwear", "Transportation", "Others".
 - Only return JSON results and do not add any explanatory text.
 

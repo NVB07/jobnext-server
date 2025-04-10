@@ -80,19 +80,24 @@ exports.deleteJob = async (req, res) => {
 
 exports.searchJobsNoMatch = async (req, res) => {
     try {
-        const { skill, location, category, jobLevel, review } = req.body;
+        const { skill, location, category, jobLevel } = req.body;
         let query = {};
 
         // Xử lý tìm kiếm nhiều kỹ năng
         if (skill) {
-            const skillsArray = skill.split(",").map((s) => s.trim()); // Tách chuỗi thành mảng
-            query.skills = { $regex: skillsArray.join("|"), $options: "i" }; // Regex tìm ít nhất một kỹ năng
+            const skillLastUpdate = removeDiacritics(skill);
+            const skillsArray = skillLastUpdate.split(",").map((s) => s.trim());
+            const regexPattern = skillsArray.join("|"); // tạo biểu thức "React|Node|Marketing"
+            const regex = new RegExp(regexPattern, "i");
+
+            query.$or = [{ skills: { $regex: regex } }, { alias: { $regex: regex } }];
         }
         if (location) {
-            query.location = { $regex: location, $options: "i" };
+            const locationLastUpdate = removeDiacritics(location);
+            query.location = { $regex: locationLastUpdate, $options: "i" };
         }
         if (category) {
-            query.category = { $regex: category, $options: "i" };
+            query.groupJobFunctionV3Name = { $regex: category, $options: "i" };
         }
         if (jobLevel) {
             query.jobLevel = { $regex: jobLevel, $options: "i" };
