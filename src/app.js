@@ -35,7 +35,6 @@ const routes = require("./routes");
 app.use(routes);
 (async () => {
     await initializeModel();
-    // await deleteExpiredJobs();
 
     console.log("Ứng dụng đã sẵn sàng!");
 })();
