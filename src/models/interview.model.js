@@ -20,6 +20,8 @@ const interviewSchema = new mongoose.Schema({
     jobTitle: String,
     jobLevelVI: String,
     jobRequirement: String,
+    jobRequirementsElement: String,
+    candidateDescription: String,
     url: String,
     skills: String,
     category: String,

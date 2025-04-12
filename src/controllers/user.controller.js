@@ -1,4 +1,5 @@
 const User = require("../models/user.model");
+const { Job } = require("../models/job.model");
 const { processWithGemini } = require("../lib/geminiProcessor");
 const cloudinary = require("cloudinary").v2;
 const fs = require("node:fs");
@@ -37,29 +38,6 @@ exports.createUser = async (req, res) => {
     }
 };
 
-// exports.updateUser = async (req, res) => {
-//     try {
-//         const { userId } = req.params; // Lấy userId từ URL (hoặc có thể từ req.body)
-//         const updateData = req.body; // Lấy dữ liệu từ request body
-
-//         // Kiểm tra nếu user tồn tại
-//         let user = await User.findOne({ userId });
-//         if (!user) {
-//             return res.status(404).json({ message: `Không tìm thấy người dùng với userId: ${userId}` });
-//         }
-
-//         // Cập nhật thông tin user
-//         user = await User.findOneAndUpdate({ userId }, updateData, { new: true });
-
-//         res.status(200).json({
-//             message: "Cập nhật user thành công!",
-//             user,
-//         });
-//     } catch (error) {
-//         console.error("Lỗi khi cập nhật user:", error);
-//         res.status(500).json({ message: "Lỗi server!" });
-//     }
-// };
 exports.updateUser = async (req, res) => {
     try {
         const { uid } = req.params; // Sử dụng uid thay vì userId
@@ -189,5 +167,92 @@ exports.uploadText = async (req, res) => {
         await exports.updateUser(req, res); // Gọi hàm updateUser
     } catch (error) {
         res.status(500).json({ message: `Lỗi khi xử lý văn bản: ${error.message}` });
+    }
+};
+
+exports.saveJob = async (req, res) => {
+    try {
+        const { userId, jobId } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User không tồn tại" });
+
+        if (user.savedJobs.includes(jobId)) {
+            return res.status(400).json({ message: "Đã lưu job này rồi" });
+        }
+
+        await User.findByIdAndUpdate(userId, {
+            $addToSet: { savedJobs: jobId },
+        });
+
+        res.status(200).json({ success: true, message: "Lưu job thành công" });
+    } catch (err) {
+        console.error("saveJob error:", err);
+        res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+};
+
+exports.unsaveJob = async (req, res) => {
+    try {
+        const { userId, jobId } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user || !user.savedJobs.includes(jobId)) {
+            return res.status(404).json({ message: "Job chưa được lưu" });
+        }
+
+        await User.findByIdAndUpdate(userId, {
+            $pull: { savedJobs: jobId },
+        });
+
+        res.status(200).json({ success: true, message: "Bỏ lưu job thành công" });
+    } catch (err) {
+        console.error("unsaveJob error:", err);
+        res.status(500).json({ success: false, message: "Lỗi server" });
+    }
+};
+
+exports.getSavedJobs = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const perPage = parseInt(req.query.perPage) || 10;
+        const skip = (page - 1) * perPage;
+
+        const user = await User.findById(userId).lean();
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User không tồn tại" });
+        }
+
+        const totalJobs = user.savedJobs.length;
+        const totalPages = Math.ceil(totalJobs / perPage);
+
+        // Lấy danh sách jobId theo thứ tự lưu
+        const saved = [...user.savedJobs].reverse();
+        const paginatedJobIds = saved.slice(skip, skip + perPage).map((id) => id.toString());
+
+        // Lấy job chi tiết
+        const jobsMap = await Job.find({ _id: { $in: paginatedJobIds } }).lean();
+        const jobMapById = {};
+        jobsMap.forEach((job) => {
+            jobMapById[job._id.toString()] = job;
+        });
+
+        // Giữ đúng thứ tự ban đầu
+        const jobs = paginatedJobIds.map((id) => jobMapById[id]).filter(Boolean);
+
+        res.json({
+            success: true,
+            data: jobs,
+            pagination: {
+                currentPage: page,
+                perPage: perPage,
+                totalPages: totalPages,
+                totalJobs: totalJobs,
+            },
+        });
+    } catch (error) {
+        console.error("getSavedJobs error:", error);
+        res.status(500).json({ success: false, error: error.message });
     }
 };

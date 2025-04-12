@@ -30,6 +30,8 @@ Requirements:
 
 10. Job requirements and Candidate information are separated by the string "====================" so don't confuse these two documents.
 
+11. Distinguish clearly between the number of years of experience the job requires and the number of years of experience the candidate has.
+
 ** IMPORTANT: Each response must be returned in JSON format without any additional explanatory text, the response has the following format:
 
 {
@@ -58,7 +60,7 @@ Candidate information: "${candidateDescription}"`;
 
 exports.interviewSession = async (req, res) => {
     try {
-        const { jobTitle, jobLevelVI, jobRequirement, jobId, url, skills, category, candidateDescription, answer } = req.body;
+        const { jobTitle, jobLevelVI, jobRequirement, jobRequirementsElement, jobId, url, skills, category, candidateDescription, answer } = req.body;
         const uid = req.user.uid;
 
         if (!uid || !jobRequirement) {
@@ -100,6 +102,8 @@ exports.interviewSession = async (req, res) => {
                 jobTitle,
                 jobLevelVI,
                 jobRequirement,
+                jobRequirementsElement,
+                candidateDescription,
                 url,
                 skills,
                 category,

@@ -9,5 +9,8 @@ router.post("/", userController.createUser);
 router.put("/:id", userController.updateUser);
 router.post("/uploadcv", upload.single("cv"), userController.uploadPDF);
 router.post("/uploadtext", userController.uploadText);
+router.get("/saved-jobs/:userId", userController.getSavedJobs);
+router.post("/save-job", userController.saveJob);
+router.post("/unsave-job", userController.unsaveJob);
 
 module.exports = router;

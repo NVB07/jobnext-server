@@ -1,9 +1,10 @@
 const { Job } = require("../models/job.model");
+const User = require("../models/user.model");
 const { Worker } = require("worker_threads");
 const { matchJobsNLP } = require("../lib/matchJobNLP");
 const diacritics = require("diacritics");
 const axios = require("axios");
-// const a= require("../lib/matchJobsWorker.js")
+
 function removeDiacritics(str) {
     console.log(diacritics.remove(str).toLowerCase());
 
@@ -80,9 +81,10 @@ exports.deleteJob = async (req, res) => {
 
 exports.searchJobsNoMatch = async (req, res) => {
     try {
-        const { skill, location, category, jobLevel } = req.body;
+        const { skill, location, category, jobLevel, uid } = req.body;
         let query = {};
-
+        const user = await User.findById(uid);
+        const savedJobs = user?.savedJobs || [];
         // Xử lý tìm kiếm nhiều kỹ năng
         if (skill) {
             const skillLastUpdate = removeDiacritics(skill);
@@ -120,12 +122,16 @@ exports.searchJobsNoMatch = async (req, res) => {
             .sort({ createdAt: -1 }) // Mới nhất trước
             .skip(skip) // Bỏ qua các bài của trang trước
             .limit(perPage);
-        console.log(allJobs.length);
+
+        const jobsWithSavedStatus = allJobs.map((job) => ({
+            ...job.toObject(),
+            isSaved: savedJobs.includes(job._id.toString()),
+        }));
 
         // Trả về kết quả
         res.json({
             success: true,
-            data: allJobs,
+            data: jobsWithSavedStatus,
             pagination: {
                 currentPage: page,
                 perPage: perPage,
