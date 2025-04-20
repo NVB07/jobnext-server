@@ -199,6 +199,8 @@ exports.searchJobs = async (req, res) => {
             const cleanRequirement = job.jobRequirement.replace(/<[^>]+>/g, " ").trim();
             return ` Require ${cleanRequirement}. Skills: ${job.skills}`;
         });
+        console.log("jobTexts", jobTexts);
+        console.log("revirwe", review);
 
         const worker = new Worker("./src/lib/matchJobsWorker.js");
         worker.postMessage({ review, jobTexts });

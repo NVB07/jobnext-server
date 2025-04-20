@@ -2,7 +2,9 @@ const User = require("../models/user.model");
 const { Job } = require("../models/job.model");
 const { processWithGemini } = require("../lib/geminiProcessor");
 const cloudinary = require("cloudinary").v2;
+const { auth } = require("../config/firebase");
 const fs = require("node:fs");
+
 exports.getUsers = async (req, res) => {
     try {
         const users = await User.find();
@@ -14,13 +16,16 @@ exports.getUsers = async (req, res) => {
 exports.getUserById = async (req, res) => {
     try {
         const { id } = req.params; // Lấy id từ URL
-
+        const userRecord = await auth.getUser(id);
         const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({ message: "Không tìm thấy user" });
         }
-
-        res.status(200).json(user);
+        return res.status(200).json({
+            success: true,
+            user,
+            userRecord,
+        });
     } catch (error) {
         console.error("Lỗi khi lấy user:", error);
         res.status(500).json({ message: "Lỗi server" });

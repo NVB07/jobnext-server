@@ -7,7 +7,7 @@ const createPromt = (jobRequirement, candidateDescription, jobTitle, skills) => 
 Requirements:
 1. The first question is always "Tell me about yourself" so that the candidate has a chance to talk about what he has.
 
-2. The number of interview questions depends on the position applied for in the job description. Each question should closely follow the job requirements.
+2. The number of interview questions depends on the position applied for in the job description, situational questions can be added to test the candidate. Each question must closely follow the job requirements.
 
 3. Do not create all the questions at once. Create one question at a time, wait for the candidate to answer, then create the next question. Continue like this until the end of the interview.
 
