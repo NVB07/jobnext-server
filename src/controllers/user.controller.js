@@ -116,6 +116,7 @@ exports.uploadPDF = async (req, res) => {
 
         // Xử lý nội dung PDF bằng Gemini
         const processedText = await processWithGemini(req.file.buffer, "application/pdf", req.file.originalname);
+        console.log(result);
 
         // Dữ liệu cần cập nhật (chỉ cập nhật userData)
         const updateData = {

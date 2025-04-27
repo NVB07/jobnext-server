@@ -104,6 +104,7 @@ exports.searchJobsNoMatch = async (req, res) => {
         if (jobLevel) {
             query.jobLevel = { $regex: jobLevel, $options: "i" };
         }
+        console.log("query", query);
 
         // Lấy tham số phân trang từ query, mặc định page = 1, perPage = 10
         const page = parseInt(req.query.page) || 1;
@@ -149,7 +150,7 @@ const jobSearchCache = new Map();
 
 exports.searchJobs = async (req, res) => {
     try {
-        const { skill, location, groupJobFunctionV3Name, jobLevel, review } = req.body;
+        const { skill, location, groupJobFunctionV3Name, jobLevel, review, uid } = req.body;
         const cacheKey = JSON.stringify({ skill, location, groupJobFunctionV3Name, jobLevel, review });
 
         // Kiểm tra cache trước khi xử lý
@@ -169,7 +170,8 @@ exports.searchJobs = async (req, res) => {
                 pagination: { currentPage: page, perPage, totalPages, totalJobs },
             });
         }
-
+        const user = await User.findById(uid);
+        const savedJobs = user?.savedJobs || [];
         let query = {};
         if (!review) return res.status(404).json({ message: "Thiếu dữ liệu tổng quan" });
 
@@ -240,9 +242,14 @@ exports.searchJobs = async (req, res) => {
             const paginatedJobs = filteredJobs.slice(skip, skip + perPage);
             const totalPages = Math.ceil(totalJobs / perPage);
 
+            const jobsWithSavedStatus = paginatedJobs.map((job) => ({
+                ...job,
+                isSaved: savedJobs.includes(job._id.toString()),
+            }));
+
             res.json({
                 success: true,
-                data: paginatedJobs,
+                data: jobsWithSavedStatus,
                 pagination: { currentPage: page, perPage, totalPages, totalJobs },
             });
         });

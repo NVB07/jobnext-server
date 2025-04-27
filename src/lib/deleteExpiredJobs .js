@@ -1,4 +1,4 @@
-const { Job } = require("../models/job.model"); // thay đường dẫn đúng tới file model của mày
+const { Job } = require("../models/job.model");
 
 const deleteExpiredJobs = async () => {
     try {
@@ -10,3 +10,4 @@ const deleteExpiredJobs = async () => {
     }
 };
 module.exports = { deleteExpiredJobs };
+// deleteExpiredJobs();

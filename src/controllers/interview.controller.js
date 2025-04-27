@@ -4,14 +4,14 @@ const { createInterview } = require("../lib/geminiInterview");
 const createPromt = (jobRequirement, candidateDescription, jobTitle, skills) => {
     return `From the job description and candidate information below, act as an interviewer and conduct the interview according to the following requirements:
 
-Requirements:
+IMPORTANT REQUIREMENTS THAT MUST BE FOLLOWED:
 1. The first question is always "Tell me about yourself" so that the candidate has a chance to talk about what he has.
 
 2. The number of interview questions depends on the position applied for in the job description, situational questions can be added to test the candidate. Each question must closely follow the job requirements.
 
 3. Do not create all the questions at once. Create one question at a time, wait for the candidate to answer, then create the next question. Continue like this until the end of the interview.
 
-4. After the candidate has answered the last question, give an assessment including:
+4. IMPORTANT - After the candidate has answered the last question, give an assessment including:
 - The candidate's strengths.
 - Weaknesses.
 - What the candidate needs to learn more.
@@ -42,10 +42,10 @@ Requirements:
 }
 
 Where:
-- "message" is the interview or assessment content.
+- "message" is the interview or assessment content AS REQUIRED BY STEP 4.
 - "state = true" if the interview is still in progress.
 - "state = false" if it has ended and has been assessed => used to close the chat.
-- "pass" only appears in the final assessment message when "state = false", if "state = true" then "pass = null".
+- "pass" only appears in the final assessment message when "state = false", if "state = true" then "pass = null". ITS VALUE MUST ALWAYS BE SET FROM 0-100 WHEN "state = false" OR IF INTERVIEW IS STOPPED (REQUIREMENTS 7 AND 8) THEN "pass = null".
 - "role" is the role of the person who created the message, in this case always "model".
 
 Here is the job description and candidate information:
