@@ -8,72 +8,69 @@ const path = require("path");
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
 const fileManager = new GoogleAIFileManager(apiKey);
-// const prompt = `This is the resume of the job applicant. Please parse and convert to a well-structured JSON format with the following labels. Include in the "cvLabel" object:
+const promptTEXT = (profile) => {
+    return `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn là phân tích CV dạng văn bản thuần túy (plain text), và trả về dữ liệu theo yêu cầu sau:
+    YÊU CẦU: Phân tích CV và trả về dữ liệu theo định dạng JSON như sau
+    "cvLabel" : {
+        "review" : chứa một đoạn văn ngắn bằng tiếng Anh Mỹ tóm tắt thông tin chính về ứng viên như tên, địa chỉ, vị trí ứng tuyển, kỹ năng, kinh nghiệm, bằng cấp hoặc chứng chỉ, giải thưởng,... để tôi có thể dễ dàng so sánh với mô tả công việc (JD).
+        "recommend": gồm chuỗi markdown có 3 phần được mô tả bằng tiếng Việt, chỉ trả về đúng 3 phần I, II, III như yêu cầu. Không thêm bất kỳ câu giới thiệu nào trước hoặc sau kết quả.
+    }
+    =====
+    Trường "recommend" gồm chuỗi markdown có ba phần sau bắt buộc bằng tiếng Việt:
+    **I. ĐÁNH GIÁ CHUNG:**
 
-// "Address": the address you want to work at (only take the Province unit, usually the address on the CV will be the work address)
-
-// "Phone_number": Phone number.
-
-// "Email": email.
-
-// "Personal_information": Full name, date of birth, place of birth if any (place of birth will not be included in the "Address" field) combined into a single string.
-
-// "Job_position": The position you are applying for.
-
-// "Career_objective": A short string describing the candidate's career objective.
-
-// "Work_Experience": Work duration and list of jobs from most recent to most distant, each job includes: Company name, Job title, Working duration, Brief description of Responsibilities and Achievements, combined into a single string, number of years of experience (calculate the number of years of work experience yourself, note that the number of years of work experience in a field is the time of starting work at a company or business).
-
-// "Projects": List of projects done including project name, company, technology or tools used and position in the project.
-
-// "Education_qualifications": List of educational qualifications, each item includes: School name, Major, Degree, Study duration, GPA (if any), combined into a single string.
-
-// "Skills": List of technical and soft skills, not divided into separate groups.
-
-// "Achievements_awards": A string listing notable achievements and awards (if any).
-
-// "Extracurricular_activities": A string listing extracurricular activities related to the job (if any).
-
-// "References": A string providing reference information.
-
-// Also, please add a "review" field outside of "cvLabel" that contains a short text in US English summarizing the candidate's key information such as name, address, position applied for, skills, experience, degrees or certifications, awards so I can easily match it to the job description (JD).
-
-// ##Requirements:
-
-// - Combine relevant information into a single string for each key label in "cvLabel".
-
-// - If there is no label data, leave the value as null
-// - The "review" field must not be missing any skills.
-
-// - Return only JSON results and do not add any explanatory text.
-
-// - Never create your own data, data should only be taken from the CV provided!
-
-// - output data keeps the original language of the CV, except "review" is in US English
-
-// Output format template:
-// {
-// "cvLabel": {
-// "Personal_information": "Nguyen Van A, born in 2000",
-// "Address":"hanoi",
-// "Phone_number":"0123456789",
-// "Email": "example@gmail.com",
-// "Career_objectives": "Seeking a challenging role in software development to enhance technical skills.",
-// "Job_position": "programmer",
-// "Work_experience": "3 years of experience working with nodejs. XYZ Company, Software Engineer, January 2020 - Present.",
-// "Projects": programming a map application at ABC company with a programming interface position using Reactjs.",
-// "Education_qualifications": "ABC University, Bachelor of Computer Science, 2016-2020, GPA 3.8...",
-// "Skills": "JavaScript, React, Node.js, Communication, Teamwork.",
-// "Achievements": "Best Employee of the Year 2022 at XYZ Company.",
-// "Extracurricular_activities": "Volunteering to teach programming to local students.",
-// "References": null
-// },
-// "Evaluation": "Candidate Nguyen Van A, born in 2000, lives in Hanoi, graduated from university with a GPA of 3.8, applying for a programmer position, has 3 years of experience with nodejs, has worked with reactjs, has skills in JavaScript, React, Node.js, Communication, Teamwork, has experience as a programmer at ABC company,..."
-// }`;
+    **Ưu điểm:** 
+    - liệt kê theo gạch đầu dòng.
+    **Nhược điểm:**
+    - liệt kê theo gạch đầu dòng, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.
+    **II. ĐỀ XUẤT CHỈNH SỬA CHI TIẾT:**
+    Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...:
+    - Nếu cần chỉnh sửa thì ghi rõ "Cần chỉnh sửa", "Nên sửa thành", "Vì sao nên sửa", kèm ví dụ cụ thể nếu có.
+    - Nếu không cần chỉnh sửa thì ghi rõ "Không cần sửa".
+    - Nếu thiếu sót trường nào thì ghi rõ "Thiếu trường", "Nên thêm trường", "Vì sao nên thêm", kèm ví dụ cụ thể nếu có.
+    - Một số trường được chấp nhận linh hoạt như:
+        + Ngày sinh: chỉ cần năm cũng được, miễn có thể đánh giá được độ tuổi.
+        + Địa chỉ: có thể chỉ ghi thành phố/tỉnh, không cần quá chi tiết.
+        + Người tham chiếu: có thể có hoặc không, tùy theo vị trí ứng tuyển hoặc bối cảnh.
+    
+    **III. LƯU Ý:**
+    - Liệt kê các gợi ý tổng quan để cải thiện CV.
+    
+    =====
+    *QUAN TRỌNG:
+    - Tuyệt đối không thêm bất kỳ đoạn văn mẫu, câu chào, lời chúc, lời khen, hoặc tóm tắt thừa thãi nào trước hoặc sau kết quả. 
+    - Dữ Liệu trả về phải là JSON hợp lệ, không có bất kỳ ký tự nào khác ngoài JSON.
+    
+    Dữ liệu CV dạng text cần phân tích nằm bên dưới:
+    
+    =====
+    Tên : ${profile.Name}
+    Ngày sinh : ${profile.DOB},
+    ${profile.Phone_Number ? "Số điện thoại : " + profile.Phone_Number + "," : null}
+    Địa chỉ : ${profile.Address},
+    Email : ${profile.Email},
+    ${profile.LinkedInPortfolio ? "LinkedIn/Portfolio : " + profile.LinkedInPortfolio + "," : null}
+    Mục tiêu nghề nghiệp : ${profile.Career_objective},
+    ${profile.University ? "Trường : " + profile.University + "," : null}
+    ${profile.Major ? "Chuyên ngành : " + profile.Major + "," : null}
+    ${profile.GPA ? "Điểm trung bình : " + profile.GPA + "," : null}
+    ${profile.Graduated_year ? "Năm tốt nghiệp : " + profile.Graduated_year + "," : null}
+    ${profile.Achievements_awards ? "Giải thưởng/Thành tích : " + profile.Achievements_awards + "," : null}
+    ${profile.Extracurricular_activities ? "Hoat động ngoại khóa : " + profile.Extracurricular_activities + "," : null}
+    ${profile.Interests ? "Sở thích : " + profile.Interests + "," : null}
+    Vị trí ứng tuyển : ${profile.Job_position},
+    ${profile.Work_Experience ? "Kinh nghiệm làm việc : " + profile.Work_Experience + "," : null}
+    ${profile.Years_of_experience ? "Số năm kinh nghiệm : " + profile.Years_of_experience + "," : null}
+    Kỹ năng : ${profile.Skills},
+    ${profile.Projects ? "Dự án : " + profile.Projects + "," : null}
+    ${profile.References ? "Người tham chiếu : " + profile.References : null}
+    =====
+    `;
+};
 
 // Cấu hình model
 
-const prompt = `This is the resume of the job applicant. Please parse and convert to a well-structured JSON format with the following labels. Include in the "cvLabel" object:
+const promptPDF = `This is the resume of the job applicant. Please parse and convert to a well-structured JSON format with the following labels. Include in the "cvLabel" object:
 
 "Name" : full name.
 
@@ -85,11 +82,12 @@ const prompt = `This is the resume of the job applicant. Please parse and conver
 
 "Email": email.
 
-"LinkedIn/Portfolio": link to the separate profile if any.
+"LinkedInPortfolio": link to the separate profile if any.
 
 "Career_objective": A short string describing the candidate's career goals.
 
-"University": name of the university
+"University": name of the university.
+"Major":university major.
 "GPA": GPA score.
 "Graduated_year": Year of graduation (or expected).
 "Achievements_awards": A list of notable achievements and awards (if any).
@@ -109,26 +107,25 @@ const prompt = `This is the resume of the job applicant. Please parse and conver
 
 "References": A string providing reference information.
 
-**Additionally, please add the "review" and "recomend" fields outside the "cvLabel". The "review" field contains a short paragraph in American English summarizing key information about the candidate such as name, address, position applied for, skills, experience, degrees or certificates, awards so that I can easily compare with the job description (JD). and "recomend" is a suggestion to improve the CV in Vietnamese according to the following format:
-**I. Tổng quan:**
-- Summary of strengths.
-- Summary of weaknesses.
+**Additionally, it is mandatory to add the "review" and "recommend" fields outside of the "cvLabel". The "review" field contains a short paragraph in American English summarizing key information about the candidate such as name, address, position applied for, skills, experience, degrees or certificates, awards so that I can easily compare with the job description (JD). and "recommend" is a suggestion to improve the Vietnamese CV in the following format:
+    **I. ĐÁNH GIÁ CHUNG:**
 
-**II. Chi tiết đề xuất chỉnh sửa:**
-
-**1. Nội dung:**
-
-**Những phần nên thêm vào:**
-  (specify specific suggestions such as which items need to be revised, titles that need to be revised, errors that need to be improved, inappropriate words, etc.).
-**Những phần nên bỏ hoặc rút gọn:**
- (specify specific suggestions such as which items need to be revised, titles that need to be revised, errors that need to be improved, inappropriate words, etc.)
-
-**2. Trình bày:**
-- Suggestions for better presentation (structure, font, layout...).
-
-**III. Đề xuất cải thiện thêm:**
-
-- Write a summary comment (3-5 lines) encouraging editing to optimize the CV.
+    **Ưu điểm:** 
+    - liệt kê theo gạch đầu dòng.
+    **Nhược điểm:**
+    - liệt kê theo gạch đầu dòng, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.
+    **II. ĐỀ XUẤT CHỈNH SỬA CHI TIẾT:**
+    Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...:
+    - Nếu cần chỉnh sửa thì ghi rõ "Cần chỉnh sửa", "Nên sửa thành", "Vì sao nên sửa", kèm ví dụ cụ thể nếu có.
+    - Nếu không cần chỉnh sửa thì ghi rõ "Không cần sửa".
+    - Nếu thiếu sót trường nào thì ghi rõ "Thiếu trường", "Nên thêm trường", "Vì sao nên thêm", kèm ví dụ cụ thể nếu có.
+    - Một số trường được chấp nhận linh hoạt như:
+        + Ngày sinh: chỉ cần năm cũng được, miễn có thể đánh giá được độ tuổi.
+        + Địa chỉ: có thể chỉ ghi thành phố/tỉnh, không cần quá chi tiết.
+        + Người tham chiếu: có thể có hoặc không, tùy theo vị trí ứng tuyển hoặc bối cảnh.
+    
+    **III. LƯU Ý:**
+    - Liệt kê các gợi ý tổng quan để cải thiện CV.
 
 *The article must follow the above layout, be detailed, clear, and easy to read.
 Do not change the format arbitrarily.
@@ -161,6 +158,7 @@ Output format sample:
 "LinkedIn/Portfolio":"https://example-link.com"
 "Career_objectives": "Looking for a challenging role in software development to enhance technical skills.",
 "University": "Bach Khoa University",
+"Major":"IT"
 "GPA":"3.0",
 "Graduated_year": "2025".
 "Achievements_awards": "First prize in FPT Security Competition 2023",
@@ -175,7 +173,7 @@ Output format sample:
 "References": null
 },
 "review": "Candidate Nguyen Van A, born in 2000, living in Hanoi, graduated from university with an average score of 3.0, applying for the position of programmer, has 1 year of experience with reactjs, has worked working with reactjs, skilled in JavaScript, React, Node.js, Communication, Teamwork, experienced as a programmer at ABC company,...",
- "recomend": ...(write as required above),
+"recommend": ...(write as required above),
 }`;
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -246,7 +244,7 @@ async function processWithGemini(buffer, mimeType, displayName) {
                                 fileUri: file.uri,
                             },
                         },
-                        { text: prompt },
+                        { text: promptPDF },
                     ],
                 },
             ],
@@ -260,11 +258,30 @@ async function processWithGemini(buffer, mimeType, displayName) {
             .text()
             .replace(/```json|```/g, "")
             .trim();
-        const jsonStringOneLine = jsonString.replace(/\s+/g, " ");
-        return jsonStringOneLine;
+        return jsonString;
     } catch (error) {
         throw new Error(`Lỗi khi xử lý với Gemini: ${error.message}`);
     }
 }
 
-module.exports = { processWithGemini };
+async function processWithGeminiText(profile) {
+    try {
+        const chatSession = model.startChat({
+            generationConfig,
+            history: [],
+        });
+
+        const result = await chatSession.sendMessage(promptTEXT(profile));
+
+        const jsonString = result.response
+            .text()
+            .replace(/```json|```/g, "")
+            .trim();
+
+        return jsonString;
+    } catch (error) {
+        throw new Error(`Lỗi khi xử lý với Gemini: ${error.message}`);
+    }
+}
+
+module.exports = { processWithGemini, processWithGeminiText };

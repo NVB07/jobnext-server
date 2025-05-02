@@ -1,7 +1,6 @@
 const { Job } = require("../models/job.model");
 const User = require("../models/user.model");
 const { Worker } = require("worker_threads");
-const { matchJobsNLP } = require("../lib/matchJobNLP");
 const diacritics = require("diacritics");
 const axios = require("axios");
 

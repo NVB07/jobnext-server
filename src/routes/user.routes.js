@@ -6,7 +6,7 @@ const upload = require("../middlewares/fileValidation");
 router.get("/", userController.getUsers);
 router.get("/:id", userController.getUserById);
 router.post("/", userController.createUser);
-router.put("/:id", userController.updateUser);
+router.patch("/:uid", userController.updateUser);
 router.post("/uploadcv", upload.single("cv"), userController.uploadPDF);
 router.post("/uploadtext", userController.uploadText);
 router.get("/saved-jobs/:userId", userController.getSavedJobs);

@@ -1,9 +1,10 @@
 const User = require("../models/user.model");
 const { Job } = require("../models/job.model");
-const { processWithGemini } = require("../lib/geminiProcessor");
+const { processWithGemini, processWithGeminiText } = require("../lib/geminiProcessor");
 const cloudinary = require("cloudinary").v2;
 const { auth } = require("../config/firebase");
 const fs = require("node:fs");
+const { jsonrepair } = require("jsonrepair");
 
 exports.getUsers = async (req, res) => {
     try {
@@ -46,6 +47,8 @@ exports.createUser = async (req, res) => {
 exports.updateUser = async (req, res) => {
     try {
         const { uid } = req.params; // Sử dụng uid thay vì userId
+        console.log("uid:", uid);
+
         const updateData = req.body; // Lấy dữ liệu từ request body
 
         // Kiểm tra nếu user tồn tại
@@ -53,15 +56,27 @@ exports.updateUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: `Không tìm thấy người dùng với uid: ${uid}` });
         }
+        const processedText = await processWithGeminiText(updateData?.profile);
+        const jsonString = jsonrepair(processedText);
+        const parseData = JSON.parse(jsonString);
+
+        const existingUserData = user.userData || {};
+        const updatedUserData = {
+            ...existingUserData,
+            ...updateData,
+            profile: {
+                ...(existingUserData.profile || {}),
+                ...(updateData.profile || {}),
+            },
+            review: parseData.cvLabel.review,
+            recommend: parseData.cvLabel.recommend,
+        };
 
         // Cập nhật thông tin user (chỉ cập nhật userData)
-        user = await User.findOneAndUpdate(
-            { uid },
-            { $set: { userData: updateData.userData } }, // Chỉ cập nhật userData
-            { new: true }
-        );
+        user = await User.findOneAndUpdate({ uid }, { $set: { userData: updatedUserData } }, { new: true });
 
         res.status(200).json({
+            success: true,
             message: "Cập nhật dữ liệu thành công!",
             user,
         });
@@ -89,9 +104,9 @@ exports.uploadPDF = async (req, res) => {
         }
 
         // Tải file lên Cloudinary
-        if (existingUser.userData.cloudinaryUrl) {
+        if (existingUser.userData.PDF_CV_URL) {
             // Lấy public_id từ URL
-            const urlParts = existingUser.userData.cloudinaryUrl.split("/");
+            const urlParts = existingUser.userData.PDF_CV_URL.split("/");
             const fileName = urlParts[urlParts.length - 1];
             const publicId = `cv_uploads/${uid}/${fileName}`; // public_id = folder + fileName
             console.log(publicId);
@@ -113,17 +128,41 @@ exports.uploadPDF = async (req, res) => {
                 })
                 .end(req.file.buffer);
         });
+        console.log(result);
 
         // Xử lý nội dung PDF bằng Gemini
         const processedText = await processWithGemini(req.file.buffer, "application/pdf", req.file.originalname);
-        console.log(result);
+        const jsonString = jsonrepair(processedText);
+        const parseData = JSON.parse(jsonString);
 
-        // Dữ liệu cần cập nhật (chỉ cập nhật userData)
         const updateData = {
-            userData: {
-                textData: processedText,
-                cloudinaryUrl: result.secure_url,
+            profile: {
+                Name: parseData.cvLabel.Name,
+                DOB: parseData.cvLabel.DOB,
+                Phone_Number: parseData.cvLabel.Phone_number,
+                Address: parseData.cvLabel.Address,
+                Email: parseData.cvLabel.Email,
+                LinkedInPortfolio: parseData.cvLabel.LinkedInPortfolio,
+                Career_objective: parseData.cvLabel.Career_objective,
+                University: parseData.cvLabel.University,
+                Major: parseData.cvLabel.Major,
+                GPA: parseData.cvLabel.GPA,
+                Graduated_year: parseData.cvLabel.Graduated_year,
+                Achievements_awards: parseData.cvLabel.Achievements_awards,
+                Extracurricular_activities: parseData.cvLabel.Extracurricular_activities,
+                Interests: parseData.cvLabel.Interests,
+                Job_position: parseData.cvLabel.Job_position,
+                Rank: parseData.cvLabel.Rank,
+                Industry: parseData.cvLabel.Industry,
+                Work_Experience: parseData.cvLabel.Work_Experience,
+                Years_of_experience: parseData.cvLabel.Years_of_experience,
+                Projects: parseData.cvLabel.Projects,
+                Skills: parseData.cvLabel.Skills,
+                References: parseData.cvLabel.References,
             },
+            review: parseData.review,
+            recommend: parseData.recommend,
+            PDF_CV_URL: result.secure_url,
         };
 
         // Gọi hàm updateUser để cập nhật
@@ -163,7 +202,7 @@ exports.uploadText = async (req, res) => {
         const updateData = {
             userData: {
                 textData: processedText,
-                cloudinaryUrl: existingUser.userData.cloudinaryUrl || "", // Giữ nguyên cloudinaryUrl nếu có
+                PDF_CV_URL: existingUser.userData.PDF_CV_URL || "", // Giữ nguyên PDF_CV_URL nếu có
             },
         };
 
