@@ -78,7 +78,7 @@ const promptPDF = `This is the resume of the job applicant. Please parse and con
 
 "Phone_number": Phone number.
 
-"Address": The address you want to work at, standardize the address like "Hanoi" instead of "hanoi" or "Ho Chi Minh" instead of "HCM" or "HoChiMinh" (only take the Province unit, usually the address on the CV will be the work address).
+"Address": The address you want to work at, standardize the address like "Hà Nội" instead of "hanoi" or "TP Hồ Chí Minh" instead of "HCM" or "HoChiMinh" (only take the Province unit, usually the address on the CV will be the work address).
 
 "Email": email.
 

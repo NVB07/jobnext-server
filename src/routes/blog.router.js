@@ -12,5 +12,6 @@ router.post("/upload-image", imageUpload.single("image"), blogController.createI
 router.post("/save-blog", blogController.saveBlog);
 router.post("/unsave-blog", blogController.unsaveBlog);
 router.get("/saved/:userId", blogController.getSavedBlogs);
+router.post("/my-blogs", blogController.getMyBlogs);
 
 module.exports = router;
