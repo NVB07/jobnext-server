@@ -13,17 +13,17 @@ const promptTEXT = (profile) => {
     YÊU CẦU: Phân tích CV và trả về dữ liệu theo định dạng JSON như sau
     "cvLabel" : {
         "review" : chứa một đoạn văn ngắn bằng tiếng Anh Mỹ tóm tắt thông tin chính về ứng viên như tên, địa chỉ, vị trí ứng tuyển, kỹ năng, kinh nghiệm, bằng cấp hoặc chứng chỉ, giải thưởng,... để tôi có thể dễ dàng so sánh với mô tả công việc (JD).
-        "recommend": gồm chuỗi markdown có 3 phần được mô tả bằng tiếng Việt, chỉ trả về đúng 3 phần I, II, III như yêu cầu. Không thêm bất kỳ câu giới thiệu nào trước hoặc sau kết quả.
+        "recommend": gồm chuỗi có 3 phần được mô tả bằng tiếng Việt, chỉ trả về đúng 3 phần I, II, III như yêu cầu. Không thêm bất kỳ câu giới thiệu nào trước hoặc sau kết quả.
     }
     =====
-    Trường "recommend" gồm chuỗi markdown có ba phần sau bắt buộc bằng tiếng Việt:
-    **I. ĐÁNH GIÁ CHUNG:**
-
-    **Ưu điểm:** 
+    Trường "recommend" gồm chuỗi có ba phần sau bắt buộc bằng tiếng Việt:
+    
+    **ĐÁNH GIÁ CHUNG:**
+    Ưu điểm:
     - liệt kê theo gạch đầu dòng.
-    **Nhược điểm:**
+    Nhược điểm:
     - liệt kê theo gạch đầu dòng, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.
-    **II. ĐỀ XUẤT CHỈNH SỬA CHI TIẾT:**
+    **ĐỀ XUẤT CHỈNH SỬA CHI TIẾT:**
     Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...:
     - Nếu cần chỉnh sửa thì ghi rõ "Cần chỉnh sửa", "Nên sửa thành", "Vì sao nên sửa", kèm ví dụ cụ thể nếu có.
     - Nếu không cần chỉnh sửa thì ghi rõ "Không cần sửa".
@@ -33,7 +33,7 @@ const promptTEXT = (profile) => {
         + Địa chỉ: có thể chỉ ghi thành phố/tỉnh, không cần quá chi tiết.
         + Người tham chiếu: có thể có hoặc không, tùy theo vị trí ứng tuyển hoặc bối cảnh.
     
-    **III. LƯU Ý:**
+    **LƯU Ý:**
     - Liệt kê các gợi ý tổng quan để cải thiện CV.
     
     =====
@@ -46,24 +46,24 @@ const promptTEXT = (profile) => {
     =====
     Tên : ${profile.Name}
     Ngày sinh : ${profile.DOB},
-    ${profile.Phone_Number ? "Số điện thoại : " + profile.Phone_Number + "," : null}
+    ${profile.Phone_Number ? "Số điện thoại : " + profile.Phone_Number + "," : ""}
     Địa chỉ : ${profile.Address},
     Email : ${profile.Email},
-    ${profile.LinkedInPortfolio ? "LinkedIn/Portfolio : " + profile.LinkedInPortfolio + "," : null}
+    ${profile.LinkedInPortfolio ? "LinkedIn/Portfolio : " + profile.LinkedInPortfolio + "," : ""}
     Mục tiêu nghề nghiệp : ${profile.Career_objective},
-    ${profile.University ? "Trường : " + profile.University + "," : null}
-    ${profile.Major ? "Chuyên ngành : " + profile.Major + "," : null}
-    ${profile.GPA ? "Điểm trung bình : " + profile.GPA + "," : null}
-    ${profile.Graduated_year ? "Năm tốt nghiệp : " + profile.Graduated_year + "," : null}
-    ${profile.Achievements_awards ? "Giải thưởng/Thành tích : " + profile.Achievements_awards + "," : null}
-    ${profile.Extracurricular_activities ? "Hoat động ngoại khóa : " + profile.Extracurricular_activities + "," : null}
-    ${profile.Interests ? "Sở thích : " + profile.Interests + "," : null}
+    ${profile.University ? "Trường : " + profile.University + "," : ""}
+    ${profile.Major ? "Chuyên ngành : " + profile.Major + "," : ""}
+    ${profile.GPA ? "Điểm trung bình : " + profile.GPA + "," : ""}
+    ${profile.Graduated_year ? "Năm tốt nghiệp : " + profile.Graduated_year + "," : ""}
+    ${profile.Achievements_awards ? "Giải thưởng/Thành tích : " + profile.Achievements_awards + "," : ""}
+    ${profile.Extracurricular_activities ? "Hoat động ngoại khóa : " + profile.Extracurricular_activities + "," : ""}
+    ${profile.Interests ? "Sở thích : " + profile.Interests + "," : ""}
     Vị trí ứng tuyển : ${profile.Job_position},
-    ${profile.Work_Experience ? "Kinh nghiệm làm việc : " + profile.Work_Experience + "," : null}
-    ${profile.Years_of_experience ? "Số năm kinh nghiệm : " + profile.Years_of_experience + "," : null}
+    ${profile.Work_Experience ? "Kinh nghiệm làm việc : " + profile.Work_Experience + "," : ""}
+    ${profile.Years_of_experience ? "Số năm kinh nghiệm : " + profile.Years_of_experience + "," : ""}
     Kỹ năng : ${profile.Skills},
-    ${profile.Projects ? "Dự án : " + profile.Projects + "," : null}
-    ${profile.References ? "Người tham chiếu : " + profile.References : null}
+    ${profile.Projects ? "Dự án : " + profile.Projects + "," : ""}
+    ${profile.References ? "Người tham chiếu : " + profile.References : ""}
     =====
     `;
 };
@@ -108,13 +108,12 @@ const promptPDF = `This is the resume of the job applicant. Please parse and con
 "References": A string providing reference information.
 
 **Additionally, it is mandatory to add the "review" and "recommend" fields outside of the "cvLabel". The "review" field contains a short paragraph in American English summarizing key information about the candidate such as name, address, position applied for, skills, experience, degrees or certificates, awards so that I can easily compare with the job description (JD). and "recommend" is a suggestion to improve the Vietnamese CV in the following format:
-    **I. ĐÁNH GIÁ CHUNG:**
-
-    **Ưu điểm:** 
+   **ĐÁNH GIÁ CHUNG:**
+    Ưu điểm:
     - liệt kê theo gạch đầu dòng.
-    **Nhược điểm:**
+    Nhược điểm:
     - liệt kê theo gạch đầu dòng, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.
-    **II. ĐỀ XUẤT CHỈNH SỬA CHI TIẾT:**
+    **ĐỀ XUẤT CHỈNH SỬA CHI TIẾT:**
     Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...:
     - Nếu cần chỉnh sửa thì ghi rõ "Cần chỉnh sửa", "Nên sửa thành", "Vì sao nên sửa", kèm ví dụ cụ thể nếu có.
     - Nếu không cần chỉnh sửa thì ghi rõ "Không cần sửa".
@@ -124,7 +123,7 @@ const promptPDF = `This is the resume of the job applicant. Please parse and con
         + Địa chỉ: có thể chỉ ghi thành phố/tỉnh, không cần quá chi tiết.
         + Người tham chiếu: có thể có hoặc không, tùy theo vị trí ứng tuyển hoặc bối cảnh.
     
-    **III. LƯU Ý:**
+    **LƯU Ý:**
     - Liệt kê các gợi ý tổng quan để cải thiện CV.
 
 *The article must follow the above layout, be detailed, clear, and easy to read.
