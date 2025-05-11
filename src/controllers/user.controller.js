@@ -17,10 +17,32 @@ exports.getUsers = async (req, res) => {
 exports.getUserById = async (req, res) => {
     try {
         const { id } = req.params; // Lấy id từ URL
+        const isOtherId = req.query.isOtherId === "true"; // Lấy từ query parameter và chuyển thành boolean
+
         const userRecord = await auth.getUser(id);
         const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({ message: "Không tìm thấy user" });
+        }
+
+        if (isOtherId) {
+            return res.status(200).json({
+                success: true,
+                user: {
+                    profile: {
+                        Address: user.userData?.profile?.Address,
+                        Years_of_experience: user.userData?.profile?.Years_of_experience,
+                        University: user.userData?.profile?.University,
+                        Skills: user.userData?.profile?.Skills,
+                    },
+                },
+                userRecord: {
+                    uid: userRecord.uid,
+                    email: userRecord.email,
+                    displayName: userRecord.displayName,
+                    photoURL: userRecord.photoURL,
+                },
+            });
         }
         return res.status(200).json({
             success: true,
