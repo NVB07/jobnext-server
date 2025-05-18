@@ -76,7 +76,7 @@ exports.updateUser = async (req, res) => {
         // Kiểm tra nếu user tồn tại
         let user = await User.findOne({ uid });
         if (!user) {
-            return res.status(404).json({ message: `Không tìm thấy người dùng với uid: ${uid}` });
+            return res.status(404).json({ message: `Không tìm thấy User với uid: ${uid}` });
         }
         const processedText = await processWithGeminiText(updateData?.profile);
         const jsonString = jsonrepair(processedText);
@@ -122,7 +122,7 @@ exports.uploadPDF = async (req, res) => {
         // Kiểm tra xem user có tồn tại không
         const existingUser = await User.findOne({ uid });
         if (!existingUser) {
-            return res.status(404).json({ message: `Không tìm thấy người dùng với uid: ${uid}` });
+            return res.status(404).json({ message: `Không tìm thấy User với uid: ${uid}` });
         }
 
         // Tải file lên Cloudinary
@@ -135,9 +135,9 @@ exports.uploadPDF = async (req, res) => {
 
             await cloudinary.uploader.destroy(publicId, { resource_type: "raw" }, (error, result) => {
                 if (error) {
-                    console.error("Lỗi khi xóa CV cũ:", error);
+                    console.error("Lỗi khi Delete CV cũ:", error);
                 } else {
-                    console.log("Xóa CV cũ thành công:", result);
+                    console.log("Delete CV cũ thành công:", result);
                 }
             });
         }
@@ -152,7 +152,7 @@ exports.uploadPDF = async (req, res) => {
         });
         console.log(result);
 
-        // Xử lý nội dung PDF bằng Gemini
+        // Xử lý Comment PDF bằng Gemini
         const processedText = await processWithGemini(req.file.buffer, "application/pdf", req.file.originalname);
         const jsonString = jsonrepair(processedText);
         const parseData = JSON.parse(jsonString);
@@ -207,7 +207,7 @@ exports.uploadText = async (req, res) => {
         // Kiểm tra xem user có tồn tại không
         const existingUser = await User.findOne({ uid });
         if (!existingUser) {
-            return res.status(404).json({ message: `Không tìm thấy người dùng với uid: ${uid}` });
+            return res.status(404).json({ message: `Không tìm thấy User với uid: ${uid}` });
         }
 
         // Tạo file tạm từ văn bản để xử lý với Gemini
@@ -217,7 +217,7 @@ exports.uploadText = async (req, res) => {
         // Xử lý văn bản bằng Gemini
         const processedText = await processWithGemini(fs.readFileSync(tempFilePath), "text/plain", "user_input.txt");
 
-        // Xóa file tạm
+        // Delete file tạm
         fs.unlinkSync(tempFilePath);
 
         // Dữ liệu cần cập nhật (chỉ cập nhật userData)

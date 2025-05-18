@@ -5,8 +5,6 @@ const diacritics = require("diacritics");
 const axios = require("axios");
 
 function removeDiacritics(str) {
-    console.log(diacritics.remove(str).toLowerCase());
-
     return diacritics.remove(str).toLowerCase();
 }
 exports.createJob = async (req, res) => {
@@ -91,7 +89,7 @@ exports.searchJobsNoMatch = async (req, res) => {
             const regexPattern = skillsArray.join("|"); // tạo biểu thức "React|Node|Marketing"
             const regex = new RegExp(regexPattern, "i");
 
-            query.$or = [{ skills: { $regex: regex } }, { alias: { $regex: regex } }];
+            query.$or = [{ skills: { $regex: regex } }, { alias: { $regex: regex } }, { companyAlias: { $regex: regex } }];
         }
         if (location) {
             const locationLastUpdate = removeDiacritics(location);
@@ -349,6 +347,42 @@ exports.getJobDetail = async (req, res) => {
             success: true,
             data: response.data,
         });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}; // model dùng jobSchema
+
+/**
+ * Lấy danh sách công ty có nhiều job nhất.
+ * GET /api/jobs/top-companies?limit=20
+ */
+exports.getTopCompanies = async (req, res) => {
+    try {
+        // số công ty cần lấy, mặc định 20
+        const limit = parseInt(req.query.limit, 10) || 20;
+
+        const companies = await Job.aggregate([
+            {
+                $group: {
+                    _id: "$company", // gom theo tên công ty
+                    totalJobs: { $sum: 1 }, // đếm job
+                    companyLogo: { $first: "$companyLogo" },
+                },
+            },
+            { $sort: { totalJobs: -1 } }, // giảm dần
+            { $limit: limit }, // giới hạn kết quả
+            {
+                $project: {
+                    // đổi _id → company
+                    _id: 0,
+                    company: "$_id",
+                    totalJobs: 1,
+                    companyLogo: 1,
+                },
+            },
+        ]);
+
+        res.json({ success: true, data: companies });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

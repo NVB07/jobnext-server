@@ -11,5 +11,5 @@ router.delete("/:id", jobController.deleteJob);
 router.post("/search", jobController.searchJobs);
 router.post("/search-no-match", jobController.searchJobsNoMatch);
 router.post("/job-detail", jobController.getJobDetail);
-
+router.get("/stats/top-companies", jobController.getTopCompanies);
 module.exports = router;

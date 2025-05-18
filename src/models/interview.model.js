@@ -29,5 +29,14 @@ const interviewSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
 });
 
+interviewSchema.virtual("job", {
+    ref: "Job",
+    localField: "jobId", // field ở interview
+    foreignField: "jobId", // field ở job
+    justOne: true, // lấy 1 record
+});
+interviewSchema.set("toObject", { virtuals: true });
+interviewSchema.set("toJSON", { virtuals: true });
+
 const Interview = mongoose.model("Interview", interviewSchema);
 module.exports = { Interview };

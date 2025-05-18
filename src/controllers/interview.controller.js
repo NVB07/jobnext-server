@@ -154,7 +154,7 @@ exports.getInterviewById = async (req, res) => {
             });
         }
 
-        let interview = await Interview.findById(interviewId);
+        let interview = await Interview.findById(interviewId).populate("job").lean({ virtuals: true });
 
         if (!interview) {
             return res.status(404).json({ message: "Không tìm thấy interview" });

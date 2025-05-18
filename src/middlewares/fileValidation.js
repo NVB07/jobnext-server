@@ -2,7 +2,7 @@ const multer = require("multer");
 
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 25 * 1024 * 1024 }, // Giới hạn 5MB
+    limits: { fileSize: 40 * 1024 * 1024 }, // Giới hạn 5MB
     fileFilter: (req, file, cb) => {
         if (file.mimetype === "application/pdf") {
             cb(null, true);
