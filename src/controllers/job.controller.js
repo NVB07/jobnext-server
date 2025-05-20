@@ -353,14 +353,38 @@ exports.getJobDetail = async (req, res) => {
 }; // model dùng jobSchema
 
 /**
- * Lấy danh sách công ty có nhiều job nhất.
- * GET /api/jobs/top-companies?limit=20
+ * Lấy danh sách công ty có nhiều job nhất với phân trang.
+ * GET /api/jobs/stats/top-companies?page=1&perPage=10
  */
 exports.getTopCompanies = async (req, res) => {
     try {
-        // số công ty cần lấy, mặc định 20
-        const limit = parseInt(req.query.limit, 10) || 20;
+        // Lấy tham số phân trang từ query, mặc định page = 1, perPage = 10
+        const page = parseInt(req.query.page) || 1;
+        const perPage = parseInt(req.query.perPage) || 10;
+        const limit = parseInt(req.query.limit) || perPage;
+        const skip = (page - 1) * perPage;
 
+        // Đếm tổng số công ty
+        const totalCompaniesCount = await Job.aggregate([
+            {
+                $group: {
+                    _id: "$company", // gom theo tên công ty
+                },
+            },
+            {
+                $match: {
+                    _id: { $ne: null, $ne: "" }, // loại bỏ công ty trống
+                },
+            },
+            {
+                $count: "total",
+            },
+        ]);
+
+        const totalCompanies = totalCompaniesCount.length > 0 ? totalCompaniesCount[0].total : 0;
+        const totalPages = Math.ceil(totalCompanies / perPage);
+
+        // Lấy danh sách công ty có phân trang
         const companies = await Job.aggregate([
             {
                 $group: {
@@ -369,8 +393,14 @@ exports.getTopCompanies = async (req, res) => {
                     companyLogo: { $first: "$companyLogo" },
                 },
             },
-            { $sort: { totalJobs: -1 } }, // giảm dần
-            { $limit: limit }, // giới hạn kết quả
+            {
+                $match: {
+                    _id: { $ne: null, $ne: "" }, // loại bỏ công ty trống
+                },
+            },
+            { $sort: { totalJobs: -1 } }, // giảm dần theo số lượng job
+            { $skip: skip }, // bỏ qua các công ty của trang trước
+            { $limit: perPage }, // giới hạn số công ty trên mỗi trang
             {
                 $project: {
                     // đổi _id → company
@@ -382,8 +412,94 @@ exports.getTopCompanies = async (req, res) => {
             },
         ]);
 
-        res.json({ success: true, data: companies });
+        res.json({
+            success: true,
+            data: companies,
+            pagination: {
+                currentPage: page,
+                perPage: perPage,
+                totalPages: totalPages,
+                totalCompanies: totalCompanies,
+            },
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Lấy danh sách tất cả tên công ty
+ * GET /api/jobs/companies
+ */
+exports.getAllCompanies = async (req, res) => {
+    try {
+        const companies = await Job.distinct("company");
+
+        // Lọc bỏ các giá trị null hoặc undefined
+        const filteredCompanies = companies.filter((company) => company);
+
+        // Sắp xếp theo thứ tự A-Z
+        filteredCompanies.sort();
+
+        res.json({
+            success: true,
+            data: filteredCompanies,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * Lấy danh sách công việc theo ngành nghề
+ * GET /api/jobs/categories
+ */
+exports.getJobsByCategory = async (req, res) => {
+    try {
+        // Sử dụng aggregation để nhóm và đếm số lượng công việc theo ngành nghề
+        const categories = await Job.aggregate([
+            {
+                $group: {
+                    _id: {
+                        category: "$groupJobFunctionV3Name",
+                        categoryVI: "$groupJobFunctionV3NameVI",
+                    },
+                    count: { $sum: 1 }, // Đếm số lượng job trong mỗi ngành
+                    // Lấy thêm mẫu một job thuộc ngành nghề đó
+                    sampleJob: { $first: { title: "$title", company: "$company" } },
+                },
+            },
+            // Loại bỏ các nhóm không có tên ngành nghề
+            {
+                $match: {
+                    "_id.category": { $ne: null, $ne: "" },
+                },
+            },
+            // Sắp xếp theo số lượng giảm dần
+            { $sort: { count: -1 } },
+            // Định dạng lại kết quả để dễ sử dụng
+            {
+                $project: {
+                    _id: 0,
+                    category: "$_id.category",
+                    categoryVI: "$_id.categoryVI",
+                    count: 1,
+                    sampleJob: 1,
+                },
+            },
+        ]);
+
+        res.json({
+            success: true,
+            data: categories,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+        });
     }
 };
