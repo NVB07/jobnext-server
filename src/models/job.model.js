@@ -1,9 +1,10 @@
 const mongoose = require("mongoose");
 
 const jobSchema = new mongoose.Schema({
-    jobId: String, // ID từ TopCV
+    jobId: String,
+    jobSource: String,
     title: String,
-    alias: String, // ID từ TopCV
+    alias: String,
     company: String,
     companyAlias: String,
     companyLogo: String,

@@ -101,7 +101,6 @@ exports.searchJobsNoMatch = async (req, res) => {
         if (jobLevel) {
             query.jobLevel = { $regex: jobLevel, $options: "i" };
         }
-        console.log("query", query);
 
         // Lấy tham số phân trang từ query, mặc định page = 1, perPage = 10
         const page = parseInt(req.query.page) || 1;
@@ -117,7 +116,7 @@ exports.searchJobsNoMatch = async (req, res) => {
         const totalPages = Math.ceil(totalJobs / perPage);
 
         const allJobs = await Job.find(query)
-            .sort({ createdAt: -1 }) // Mới nhất trước
+            .sort({ updatedAt: -1 }) // Mới nhất trước
             .skip(skip) // Bỏ qua các bài của trang trước
             .limit(perPage);
 

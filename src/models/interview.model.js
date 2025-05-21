@@ -17,6 +17,7 @@ const chatSchema = new mongoose.Schema(
 const interviewSchema = new mongoose.Schema({
     uid: String,
     jobId: String,
+    jobSource: String,
     jobTitle: String,
     jobLevelVI: String,
     jobRequirement: String,

@@ -60,7 +60,7 @@ Candidate information: "${candidateDescription}"`;
 
 exports.interviewSession = async (req, res) => {
     try {
-        const { jobTitle, jobLevelVI, jobRequirement, jobRequirementsElement, jobId, url, skills, category, candidateDescription, answer } = req.body;
+        const { jobTitle, jobSource, jobLevelVI, jobRequirement, jobRequirementsElement, jobId, url, skills, category, candidateDescription, answer } = req.body;
         const uid = req.user.uid;
 
         if (!uid || !jobRequirement) {
@@ -98,6 +98,7 @@ exports.interviewSession = async (req, res) => {
 
             interview = new Interview({
                 uid,
+                jobSource,
                 jobId,
                 jobTitle,
                 jobLevelVI,
