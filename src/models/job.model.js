@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const jobSchema = new mongoose.Schema({
     jobId: String,
     jobSource: String,
+    contact: String,
     title: String,
     alias: String,
     company: String,
