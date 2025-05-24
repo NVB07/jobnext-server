@@ -22,6 +22,7 @@ const jobSchema = new mongoose.Schema({
     url: String,
     skills: String,
     expiredOn: Date,
+    createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }, // Để kiểm tra cập nhật
 });
 

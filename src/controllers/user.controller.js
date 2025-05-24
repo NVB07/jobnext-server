@@ -6,14 +6,14 @@ const { auth } = require("../config/firebase");
 const fs = require("node:fs");
 const { jsonrepair } = require("jsonrepair");
 
-exports.getUsers = async (req, res) => {
-    try {
-        const users = await User.find();
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+// exports.getUsers = async (req, res) => {
+//     try {
+//         const users = await User.find();
+//         res.json(users);
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// };
 exports.getUserById = async (req, res) => {
     try {
         const { id } = req.params; // Lấy id từ URL

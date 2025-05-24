@@ -3,7 +3,7 @@ const router = express.Router();
 const userController = require("../controllers/user.controller");
 const upload = require("../middlewares/fileValidation");
 // Định nghĩa các API
-router.get("/", userController.getUsers);
+// router.get("/", userController.getUsers);
 router.get("/:id", userController.getUserById);
 router.post("/", userController.createUser);
 router.patch("/:uid", userController.updateUser);
