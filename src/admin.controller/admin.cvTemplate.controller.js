@@ -71,3 +71,29 @@ exports.updateTemplate = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+exports.deleteTemplate = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedTemplate = await CvTemplate.findByIdAndDelete(id);
+
+        if (!deletedTemplate) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy template",
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Xóa template thành công",
+            data: deletedTemplate,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+        });
+    }
+};
