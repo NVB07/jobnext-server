@@ -3,6 +3,10 @@ const User = require("../models/user.model");
 const { Worker } = require("worker_threads");
 const diacritics = require("diacritics");
 const axios = require("axios");
+const { HybridMatchingEngine } = require("../lib/hybridMatchingEngine");
+
+// Initialize hybrid engine
+const hybridEngine = new HybridMatchingEngine();
 
 function removeDiacritics(str) {
     return diacritics.remove(str).toLowerCase();
@@ -215,7 +219,7 @@ exports.searchJobs = async (req, res) => {
                 const match = matchScore.jobMatches.find((m) => m.jobId === `job_${index + 1}`);
                 return {
                     ...job._doc,
-                    semanticScore: match ? parseFloat(match.semanticScore) : 0,
+                    semanticScore: match ? parseFloat(match.matchScore) : 0,
                 };
             });
 
@@ -256,6 +260,168 @@ exports.searchJobs = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+// New hybrid search endpoint
+exports.hybridSearchJobs = async (req, res) => {
+    try {
+        const { skill, location, groupJobFunctionV3Name, jobLevel, review, uid, method = "hybrid" } = req.body;
+
+        if (!review) {
+            return res.status(400).json({
+                success: false,
+                error: "Thiếu dữ liệu tổng quan CV",
+            });
+        }
+
+        const user = await User.findById(uid);
+        const savedJobs = user?.savedJobs || [];
+        let query = {};
+
+        // Build query filters (same as existing searchJobs)
+        if (skill) {
+            const skillLastUpdate = removeDiacritics(skill);
+            const skillsArray = skillLastUpdate.split(",").map((s) => s.trim());
+            query.skills = { $regex: skillsArray.join("|"), $options: "i" };
+        }
+        if (location) {
+            const locationLastUpdate = removeDiacritics(location);
+            query.location = { $regex: locationLastUpdate, $options: "i" };
+        }
+        if (groupJobFunctionV3Name) {
+            const groupJobFunctionV3NameLastUpdate = removeDiacritics(groupJobFunctionV3Name);
+            query.groupJobFunctionV3Name = { $regex: groupJobFunctionV3NameLastUpdate, $options: "i" };
+        }
+        if (jobLevel) {
+            query.jobLevel = jobLevel;
+        }
+
+        const allJobs = await Job.find(query).sort({ updatedAt: -1 });
+        console.log(`🔍 Found ${allJobs.length} jobs matching filters`);
+
+        const jobTexts = allJobs.map((job) => {
+            const cleanRequirement = job.jobRequirement.replace(/<[^>]+>/g, " ").trim();
+            return `Require ${cleanRequirement}. Skills: ${job.skills}`;
+        });
+
+        let result;
+        const requiredSkills = skill ? skill.split(",").map((s) => s.trim()) : [];
+
+        // Choose matching method
+        switch (method) {
+            case "tfidf":
+                console.log("🚀 Using TF-IDF Quick Match");
+                result = await hybridEngine.quickMatch(review, jobTexts);
+                break;
+
+            case "hybrid":
+                console.log("🚀 Using Hybrid Matching Engine");
+                const options = {
+                    tfIdfWeight: 0.25,
+                    semanticWeight: 0.55,
+                    skillWeight: 0.2,
+                    enableFastMode: allJobs.length > 50,
+                };
+                result = await hybridEngine.hybridMatch(review, jobTexts, requiredSkills, options);
+                break;
+
+            case "transformer":
+            default:
+                console.log("🚀 Using Transformer-based Matching");
+                // Use existing worker approach
+                const worker = new Worker("./src/lib/matchJobsWorker.js");
+                worker.postMessage({ review, jobTexts });
+
+                return new Promise((resolve, reject) => {
+                    worker.on("message", (matchScore) => {
+                        if (matchScore.error) {
+                            return reject(new Error(matchScore.error));
+                        }
+
+                        const jobsWithScore = allJobs.map((job, index) => {
+                            const match = matchScore.jobMatches.find((m) => m.jobId === `job_${index + 1}`);
+                            return {
+                                ...job._doc,
+                                semanticScore: match ? parseFloat(match.matchScore) : 0,
+                                method: "transformer",
+                            };
+                        });
+
+                        resolve(jobsWithScore);
+                    });
+
+                    worker.on("error", reject);
+                });
+        }
+
+        // Process results for response
+        const jobsWithScore = allJobs.map((job, index) => {
+            const match = result.jobMatches.find((m) => m.jobId === `job_${index + 1}` || m.jobIndex === index);
+
+            let score = 0;
+            let matchData = { method };
+
+            if (match) {
+                if (method === "hybrid") {
+                    score = parseFloat(match.hybridScore);
+                    matchData = {
+                        method: "hybrid",
+                        hybridScore: match.hybridScore,
+                        breakdown: match.scores,
+                        detectedSkills: match.detectedSkills,
+                    };
+                } else {
+                    score = parseFloat(match.matchScore);
+                    matchData = {
+                        method,
+                        detectedSkills: match.detectedSkills || [],
+                    };
+                }
+            }
+
+            return {
+                ...job._doc,
+                semanticScore: score,
+                matchData,
+            };
+        });
+
+        const filteredJobs = jobsWithScore.filter((job) => job.semanticScore > 0);
+        filteredJobs.sort((a, b) => b.semanticScore - a.semanticScore);
+
+        // Pagination
+        const page = parseInt(req.query.page) || 1;
+        const perPage = parseInt(req.query.perPage) || 10;
+        const skip = (page - 1) * perPage;
+        const totalJobs = filteredJobs.length;
+        const paginatedJobs = filteredJobs.slice(skip, skip + perPage);
+        const totalPages = Math.ceil(totalJobs / perPage);
+
+        const jobsWithSavedStatus = paginatedJobs.map((job) => ({
+            ...job,
+            isSaved: savedJobs.includes(job._id.toString()),
+        }));
+
+        // Add performance info
+        const maxScore = filteredJobs.length > 0 ? Math.max(...filteredJobs.map((j) => j.semanticScore)) : 0;
+
+        res.json({
+            success: true,
+            data: jobsWithSavedStatus,
+            pagination: { currentPage: page, perPage, totalPages, totalJobs },
+            searchInfo: {
+                method,
+                maxScore: maxScore.toFixed(1),
+                totalMatched: filteredJobs.length,
+                requiredSkills,
+                ...(result.hybridInfo || {}),
+            },
+        });
+    } catch (error) {
+        console.error("Hybrid search error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 exports.getJobDetail = async (req, res) => {
     try {
         const { url } = req.body;

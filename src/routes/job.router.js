@@ -7,6 +7,7 @@ router.post("/", jobController.createJob);
 router.get("/", jobController.getJobs);
 router.post("/search", jobController.searchJobs);
 router.post("/search-no-match", jobController.searchJobsNoMatch);
+router.post("/hybrid-search", jobController.hybridSearchJobs);
 router.post("/job-detail", jobController.getJobDetail);
 router.get("/stats/top-companies", jobController.getTopCompanies);
 router.get("/companies", jobController.getAllCompanies);
