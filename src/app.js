@@ -38,6 +38,10 @@ cloudinary.config({
 
 const app = express();
 
+app.get("/ping", (req, res) => {
+    res.send("pong");
+});
+
 // Middleware
 app.use(express.json()); // Đọc JSON body
 app.use(cors()); // Bật CORS
