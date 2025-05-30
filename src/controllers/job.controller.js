@@ -4,6 +4,7 @@ const { Worker } = require("worker_threads");
 const diacritics = require("diacritics");
 const axios = require("axios");
 const { HybridMatchingEngine } = require("../lib/hybridMatchingEngine");
+const { matchJobsNLP } = require("../lib/matchJobNLP");
 
 // Initialize hybrid engine
 const hybridEngine = new HybridMatchingEngine();
@@ -148,11 +149,74 @@ exports.searchJobsNoMatch = async (req, res) => {
 
 // Thêm cache object ở phạm vi module
 const jobSearchCache = new Map();
+const hybridSearchCache = new Map(); // NEW: Cache for hybrid search
+
+// Cache management configuration
+const CACHE_CONFIG = {
+    maxSize: 100, // Maximum number of cached searches
+    ttl: 30 * 60 * 1000, // 30 minutes TTL
+    cleanupInterval: 5 * 60 * 1000, // Cleanup every 5 minutes
+};
+
+// Cache cleanup function
+function cleanupCache(cache) {
+    if (cache.size > CACHE_CONFIG.maxSize) {
+        const entries = Array.from(cache.entries());
+        // Remove oldest 30% of entries
+        const toRemove = Math.floor(CACHE_CONFIG.maxSize * 0.3);
+        entries.slice(0, toRemove).forEach(([key]) => cache.delete(key));
+        console.log(`🧹 Cache cleanup: Removed ${toRemove} entries`);
+    }
+}
+
+// Automatic cache cleanup
+setInterval(() => {
+    const now = Date.now();
+
+    // Cleanup hybrid cache
+    for (const [key, data] of hybridSearchCache.entries()) {
+        if (now - data.timestamp > CACHE_CONFIG.ttl) {
+            hybridSearchCache.delete(key);
+        }
+    }
+
+    // Cleanup old job search cache
+    for (const [key, data] of jobSearchCache.entries()) {
+        if (data.timestamp && now - data.timestamp > CACHE_CONFIG.ttl) {
+            jobSearchCache.delete(key);
+        }
+    }
+
+    cleanupCache(hybridSearchCache);
+    cleanupCache(jobSearchCache);
+}, CACHE_CONFIG.cleanupInterval);
+
+// Generate cache key for hybrid search
+function generateHybridCacheKey(params) {
+    const { skill, location, groupJobFunctionV3Name, jobLevel, review, method, checkSkills, checkLocation, checkExperience } = params;
+
+    // Create a normalized review (first 200 chars for key generation)
+    const normalizedReview = review ? review.substring(0, 200).toLowerCase().trim() : "";
+
+    const keyData = {
+        skill: skill || "",
+        location: location || "",
+        category: groupJobFunctionV3Name || "",
+        jobLevel: jobLevel || "",
+        review: normalizedReview,
+        method: method || "transformer",
+        checkSkills,
+        checkLocation,
+        checkExperience,
+    };
+
+    return JSON.stringify(keyData);
+}
 
 exports.searchJobs = async (req, res) => {
     try {
-        const { skill, location, groupJobFunctionV3Name, jobLevel, review, uid } = req.body;
-        const cacheKey = JSON.stringify({ skill, location, groupJobFunctionV3Name, jobLevel, review });
+        const { skill, location, groupJobFunctionV3Name, jobLevel, review, uid, checkSkills = true, checkLocation = true, checkExperience = true } = req.body;
+        const cacheKey = JSON.stringify({ skill, location, groupJobFunctionV3Name, jobLevel, review, checkSkills, checkLocation, checkExperience });
 
         // Kiểm tra cache trước khi xử lý
         if (jobSearchCache.has(cacheKey)) {
@@ -203,8 +267,36 @@ exports.searchJobs = async (req, res) => {
             return ` Require ${cleanRequirement}. Skills: ${job.skills}`;
         });
 
+        // Prepare required skills and options for matching
+        const requiredSkills = skill ? skill.split(",").map((s) => s.trim()) : [];
+        const performanceOptions = {
+            fastMode: allJobs.length > 25,
+            // 🚀 ENHANCED: Much higher limits when no filters are applied
+            maxJobs: (() => {
+                const allFiltersDisabled = !checkSkills && !checkLocation && !checkExperience;
+                if (allFiltersDisabled) {
+                    // When no filters, process way more jobs
+                    return Math.min(allJobs.length, 150); // Up to 150 jobs when no filters
+                } else {
+                    // Original logic when filters are applied
+                    return allJobs.length > 100 ? 80 : allJobs.length > 50 ? 60 : allJobs.length > 25 ? 40 : allJobs.length;
+                }
+            })(),
+            useCache: true,
+            geminiLimit: allJobs.length > 50 ? 5 : allJobs.length > 25 ? 8 : 10,
+            // 🆕 NEW: Pass checkbox filters to NLP matching
+            checkSkills,
+            checkLocation,
+            checkExperience,
+        };
+
+        console.log(`🔧 NLP Options: ${allJobs.length} jobs, maxJobs: ${performanceOptions.maxJobs}, skills: [${requiredSkills.join(", ")}]`);
+        console.log(`🔍 Checkbox Filters: Skills=${checkSkills}, Location=${checkLocation}, Experience=${checkExperience}`);
+
+        console.log(`🔧 Sending to worker: ${allJobs.length} jobs, maxJobs: ${performanceOptions.maxJobs}, skills: [${requiredSkills.join(", ")}]`);
+
         const worker = new Worker("./src/lib/matchJobsWorker.js");
-        worker.postMessage({ review, jobTexts });
+        worker.postMessage({ review, jobTexts, requiredSkills, options: performanceOptions });
 
         worker.on("message", (matchScore) => {
             if (matchScore.error) {
@@ -264,7 +356,19 @@ exports.searchJobs = async (req, res) => {
 // New hybrid search endpoint
 exports.hybridSearchJobs = async (req, res) => {
     try {
-        const { skill, location, groupJobFunctionV3Name, jobLevel, review, uid, method = "hybrid" } = req.body;
+        const {
+            skill,
+            location,
+            groupJobFunctionV3Name,
+            jobLevel,
+            review,
+            uid,
+            method = "transformer",
+            // 🆕 NEW: Checkbox filter options from client
+            checkSkills = true,
+            checkLocation = true,
+            checkExperience = true,
+        } = req.body;
 
         if (!review) {
             return res.status(400).json({
@@ -273,11 +377,70 @@ exports.hybridSearchJobs = async (req, res) => {
             });
         }
 
+        // Generate cache key for this search (include checkbox state)
+        const cacheKey = generateHybridCacheKey({
+            skill,
+            location,
+            groupJobFunctionV3Name,
+            jobLevel,
+            review,
+            method,
+            checkSkills,
+            checkLocation,
+            checkExperience,
+        });
+
+        console.log(`🔍 Hybrid Search Request - Method: ${method} | Checkbox: Skills=${checkSkills}, Location=${checkLocation}, Experience=${checkExperience}`);
+        console.log(`📍 Cache Key: ${cacheKey.substring(0, 50)}...`);
+
+        // Check cache first for instant pagination
+        if (hybridSearchCache.has(cacheKey)) {
+            const cachedData = hybridSearchCache.get(cacheKey);
+            console.log(`⚡ Cache HIT! Using cached results with ${cachedData.results.length} jobs`);
+
+            // Get user saved jobs for current request
+            const user = await User.findById(uid);
+            const savedJobs = user?.savedJobs || [];
+
+            // Pagination from cached results (INSTANT!)
+            const page = parseInt(req.query.page) || 1;
+            const perPage = parseInt(req.query.perPage) || 10;
+            const skip = (page - 1) * perPage;
+            const totalJobs = cachedData.results.length;
+            const paginatedJobs = cachedData.results.slice(skip, skip + perPage);
+            const totalPages = Math.ceil(totalJobs / perPage);
+
+            // Add saved status to current page results
+            const jobsWithSavedStatus = paginatedJobs.map((job) => ({
+                ...job,
+                isSaved: savedJobs.includes(job._id.toString()),
+            }));
+
+            // Update cache timestamp (accessed recently)
+            cachedData.timestamp = Date.now();
+            cachedData.accessCount = (cachedData.accessCount || 0) + 1;
+
+            return res.json({
+                success: true,
+                data: jobsWithSavedStatus,
+                pagination: { currentPage: page, perPage, totalPages, totalJobs },
+                searchInfo: {
+                    ...cachedData.searchInfo,
+                    cached: true,
+                    cacheAge: Math.round((Date.now() - cachedData.createdAt) / 1000), // seconds
+                    accessCount: cachedData.accessCount,
+                },
+            });
+        }
+
+        // Cache MISS - Need to perform full NLP matching
+        console.log(`❌ Cache MISS - Performing full NLP matching...`);
+
         const user = await User.findById(uid);
         const savedJobs = user?.savedJobs || [];
         let query = {};
 
-        // Build query filters (same as existing searchJobs)
+        // Build query filters (same as existing logic)
         if (skill) {
             const skillLastUpdate = removeDiacritics(skill);
             const skillsArray = skillLastUpdate.split(",").map((s) => s.trim());
@@ -295,6 +458,7 @@ exports.hybridSearchJobs = async (req, res) => {
             query.jobLevel = jobLevel;
         }
 
+        const startTime = Date.now();
         const allJobs = await Job.find(query).sort({ updatedAt: -1 });
         console.log(`🔍 Found ${allJobs.length} jobs matching filters`);
 
@@ -316,9 +480,9 @@ exports.hybridSearchJobs = async (req, res) => {
             case "hybrid":
                 console.log("🚀 Using Hybrid Matching Engine");
                 const options = {
-                    tfIdfWeight: 0.25,
-                    semanticWeight: 0.55,
-                    skillWeight: 0.2,
+                    tfIdfWeight: 0.2,
+                    semanticWeight: 0.5,
+                    skillWeight: 0.3,
                     enableFastMode: allJobs.length > 50,
                 };
                 result = await hybridEngine.hybridMatch(review, jobTexts, requiredSkills, options);
@@ -326,31 +490,40 @@ exports.hybridSearchJobs = async (req, res) => {
 
             case "transformer":
             default:
-                console.log("🚀 Using Transformer-based Matching");
-                // Use existing worker approach
-                const worker = new Worker("./src/lib/matchJobsWorker.js");
-                worker.postMessage({ review, jobTexts });
+                console.log("🚀 Using Optimized Transformer-based Matching");
 
-                return new Promise((resolve, reject) => {
-                    worker.on("message", (matchScore) => {
-                        if (matchScore.error) {
-                            return reject(new Error(matchScore.error));
+                // Configure performance options based on dataset size
+                const performanceOptions = {
+                    fastMode: allJobs.length > 25, // Enable fast mode for datasets larger than 25 jobs
+                    // 🚀 ENHANCED: Much higher limits when no filters are applied
+                    maxJobs: (() => {
+                        const allFiltersDisabled = !checkSkills && !checkLocation && !checkExperience;
+                        if (allFiltersDisabled) {
+                            // When no filters, process way more jobs
+                            return Math.min(allJobs.length, 150); // Up to 150 jobs when no filters
+                        } else {
+                            // Original logic when filters are applied
+                            return allJobs.length > 100 ? 80 : allJobs.length > 50 ? 60 : allJobs.length > 25 ? 40 : allJobs.length;
                         }
+                    })(),
+                    useCache: true,
+                    geminiLimit: allJobs.length > 30 ? 3 : allJobs.length > 15 ? 5 : 8,
+                    // 🚀 CRITICAL: Pass checkbox filter parameters to NLP matching
+                    checkSkills,
+                    checkLocation,
+                    checkExperience,
+                };
 
-                        const jobsWithScore = allJobs.map((job, index) => {
-                            const match = matchScore.jobMatches.find((m) => m.jobId === `job_${index + 1}`);
-                            return {
-                                ...job._doc,
-                                semanticScore: match ? parseFloat(match.matchScore) : 0,
-                                method: "transformer",
-                            };
-                        });
+                console.log(
+                    `⚡ Performance mode: ${performanceOptions.fastMode ? "FAST" : "STANDARD"} | Max jobs: ${performanceOptions.maxJobs} | Gemini: ${
+                        performanceOptions.geminiLimit
+                    }`
+                );
+                console.log(`🔍 Filter Status: Skills=${checkSkills}, Location=${checkLocation}, Experience=${checkExperience}`);
+                console.log(`📊 Dataset: ${allJobs.length} total jobs, will process up to ${performanceOptions.maxJobs} jobs`);
 
-                        resolve(jobsWithScore);
-                    });
-
-                    worker.on("error", reject);
-                });
+                result = await matchJobsNLP(review, jobTexts, requiredSkills, performanceOptions);
+                break;
         }
 
         // Process results for response
@@ -388,7 +561,38 @@ exports.hybridSearchJobs = async (req, res) => {
         const filteredJobs = jobsWithScore.filter((job) => job.semanticScore > 0);
         filteredJobs.sort((a, b) => b.semanticScore - a.semanticScore);
 
-        // Pagination
+        const processingTime = Date.now() - startTime;
+        const maxScore = filteredJobs.length > 0 ? Math.max(...filteredJobs.map((j) => j.semanticScore)) : 0;
+
+        // Prepare search info
+        const searchInfo = {
+            method,
+            maxScore: maxScore.toFixed(1),
+            totalMatched: filteredJobs.length,
+            requiredSkills,
+            processingTime,
+            cached: false,
+            ...(result.hybridInfo || {}),
+        };
+
+        // Cache the complete sorted results for future pagination requests
+        const cacheData = {
+            results: filteredJobs, // Complete sorted results
+            searchInfo,
+            timestamp: Date.now(),
+            createdAt: Date.now(),
+            accessCount: 1,
+            method,
+            totalJobs: filteredJobs.length,
+        };
+
+        hybridSearchCache.set(cacheKey, cacheData);
+        console.log(`💾 Cached ${filteredJobs.length} results for future pagination | Processing time: ${processingTime}ms`);
+
+        // Cleanup cache if needed
+        cleanupCache(hybridSearchCache);
+
+        // Pagination for current request
         const page = parseInt(req.query.page) || 1;
         const perPage = parseInt(req.query.perPage) || 10;
         const skip = (page - 1) * perPage;
@@ -401,20 +605,11 @@ exports.hybridSearchJobs = async (req, res) => {
             isSaved: savedJobs.includes(job._id.toString()),
         }));
 
-        // Add performance info
-        const maxScore = filteredJobs.length > 0 ? Math.max(...filteredJobs.map((j) => j.semanticScore)) : 0;
-
         res.json({
             success: true,
             data: jobsWithSavedStatus,
             pagination: { currentPage: page, perPage, totalPages, totalJobs },
-            searchInfo: {
-                method,
-                maxScore: maxScore.toFixed(1),
-                totalMatched: filteredJobs.length,
-                requiredSkills,
-                ...(result.hybridInfo || {}),
-            },
+            searchInfo,
         });
     } catch (error) {
         console.error("Hybrid search error:", error);
