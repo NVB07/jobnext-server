@@ -29,7 +29,15 @@ const userSchema = new mongoose.Schema(
                 References: String,
             },
             review: String,
-            recommend: String,
+            recommend: {
+                DanhGia: {
+                    UuDiem: String,
+                    NhuocDiem: String,
+                },
+                CanChinhSuaChiTiet: String,
+                CanThem: String,
+                LuuY: String,
+            },
             PDF_CV_URL: String,
         },
         uid: { type: String, required: true },

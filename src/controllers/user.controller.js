@@ -81,6 +81,8 @@ exports.updateUser = async (req, res) => {
         const processedText = await processWithGeminiText(updateData?.profile);
         const jsonString = jsonrepair(processedText);
         const parseData = JSON.parse(jsonString);
+        console.log(parseData);
+        console.log("processedText//////////", processedText);
 
         const existingUserData = user.userData || {};
         const updatedUserData = {
@@ -91,7 +93,15 @@ exports.updateUser = async (req, res) => {
                 ...(updateData.profile || {}),
             },
             review: parseData.cvLabel.review,
-            recommend: parseData.cvLabel.recommend,
+            recommend: {
+                DanhGia: {
+                    UuDiem: parseData.cvLabel.recommend.DanhGia.UuDiem,
+                    NhuocDiem: parseData.cvLabel.recommend.DanhGia.NhuocDiem,
+                },
+                CanChinhSuaChiTiet: parseData.cvLabel.recommend.CanChinhSuaChiTiet,
+                CanThem: parseData.cvLabel.recommend.CanThem,
+                LuuY: parseData.cvLabel.recommend.LuuY,
+            },
         };
 
         // Cập nhật thông tin user (chỉ cập nhật userData)
@@ -183,7 +193,15 @@ exports.uploadPDF = async (req, res) => {
                 References: parseData.cvLabel.References,
             },
             review: parseData.review,
-            recommend: parseData.recommend,
+            recommend: {
+                DanhGia: {
+                    UuDiem: parseData.recommend.DanhGia.UuDiem,
+                    NhuocDiem: parseData.recommend.DanhGia.NhuocDiem,
+                },
+                CanChinhSuaChiTiet: parseData.recommend.CanChinhSuaChiTiet,
+                CanThem: parseData.recommend.CanThem,
+                LuuY: parseData.recommend.LuuY,
+            },
             PDF_CV_URL: result.secure_url,
         };
 

@@ -2,9 +2,12 @@ const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@googl
 
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
+const modelName = ["gemini-2.0-flash", "gemini-2.5-flash-preview-04-17", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash-lite"];
 
-const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+// Initialize with the first model
+let currentModelIndex = 0;
+let model = genAI.getGenerativeModel({
+    model: modelName[currentModelIndex],
 });
 
 const generationConfig = {
@@ -17,19 +20,36 @@ const generationConfig = {
 };
 
 async function createInterview(promt, history = []) {
-    const chatSession = model.startChat({
-        generationConfig,
-        history: history,
-    });
+    let attempts = 0;
+    let maxAttempts = modelName.length;
 
-    const result = await chatSession.sendMessage(promt);
-    console.log(result.response.text());
-    // const jsonString = result.response
-    //     .text()
-    //     .replace(/```json|```/g, "")
-    //     .trim();
-    // return jsonString;
-    return result.response.text();
+    while (attempts < maxAttempts) {
+        try {
+            console.log(`Attempting with model: ${modelName[currentModelIndex]}`);
+            const chatSession = model.startChat({
+                generationConfig,
+                history: history,
+            });
+
+            const result = await chatSession.sendMessage(promt);
+            console.log(`Success with model: ${modelName[currentModelIndex]}`);
+            return result.response.text();
+        } catch (error) {
+            console.error(`Error with model ${modelName[currentModelIndex]}: ${error.message}`);
+            attempts++;
+
+            // Try next model if available
+            if (attempts < maxAttempts) {
+                currentModelIndex = (currentModelIndex + 1) % modelName.length;
+                model = genAI.getGenerativeModel({
+                    model: modelName[currentModelIndex],
+                });
+                console.log(`Switching to next model: ${modelName[currentModelIndex]}`);
+            } else {
+                throw new Error("All models failed to respond. Please try again later.");
+            }
+        }
+    }
 }
 
 module.exports = { createInterview };
