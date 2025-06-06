@@ -129,14 +129,35 @@ exports.uploadPDF = async (req, res) => {
             return res.status(400).json({ message: "Vui lòng cung cấp uid!" });
         }
 
+        // Thiết lập header cho SSE
+        res.writeHead(200, {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+        });
+
+        // Hàm gửi sự kiện tới client
+        const sendEvent = (eventName, data) => {
+            res.write(`event: ${eventName}\n`);
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        };
+
+        // Thông báo bắt đầu quá trình
+        sendEvent("processing", { status: "start", message: "Bắt đầu xử lý file PDF", progress: 0 });
+
         // Kiểm tra xem user có tồn tại không
         const existingUser = await User.findOne({ uid });
         if (!existingUser) {
-            return res.status(404).json({ message: `Không tìm thấy User với uid: ${uid}` });
+            sendEvent("error", { message: `Không tìm thấy User với uid: ${uid}` });
+            return res.end();
         }
 
-        // Tải file lên Cloudinary
+        sendEvent("processing", { status: "checking", message: "Kiểm tra thông tin người dùng", progress: 10 });
+
+        // Xử lý xóa file cũ nếu có
         if (existingUser.userData.PDF_CV_URL) {
+            sendEvent("processing", { status: "deleting_old", message: "Đang xóa CV cũ", progress: 20 });
+
             // Lấy public_id từ URL
             const urlParts = existingUser.userData.PDF_CV_URL.split("/");
             const fileName = urlParts[urlParts.length - 1];
@@ -146,11 +167,18 @@ exports.uploadPDF = async (req, res) => {
             await cloudinary.uploader.destroy(publicId, { resource_type: "raw" }, (error, result) => {
                 if (error) {
                     console.error("Lỗi khi Delete CV cũ:", error);
+                    sendEvent("processing", { status: "delete_old_failed", message: "Xóa CV cũ thất bại, tiếp tục quá trình", progress: 25 });
                 } else {
                     console.log("Delete CV cũ thành công:", result);
+                    sendEvent("processing", { status: "delete_old_success", message: "Xóa CV cũ thành công", progress: 30 });
                 }
             });
+        } else {
+            sendEvent("processing", { status: "no_old_cv", message: "Không có CV cũ cần xóa", progress: 30 });
         }
+
+        // Upload file mới lên Cloudinary
+        sendEvent("processing", { status: "uploading", message: "Đang tải CV lên cloud", progress: 40 });
 
         const result = await new Promise((resolve, reject) => {
             cloudinary.uploader
@@ -160,12 +188,19 @@ exports.uploadPDF = async (req, res) => {
                 })
                 .end(req.file.buffer);
         });
+
+        sendEvent("processing", { status: "uploaded", message: "Tải CV lên cloud thành công", progress: 60 });
         console.log(result);
 
         // Xử lý Comment PDF bằng Gemini
+        sendEvent("processing", { status: "analyzing", message: "Đang phân tích CV", progress: 70 });
+
         const processedText = await processWithGemini(req.file.buffer, "application/pdf", req.file.originalname);
+        sendEvent("processing", { status: "analyzed", message: "Phân tích CV thành công", progress: 80 });
+
         const jsonString = jsonrepair(processedText);
         const parseData = JSON.parse(jsonString);
+        sendEvent("processing", { status: "parsing", message: "Đang xử lý dữ liệu", progress: 90 });
 
         const updateData = {
             profile: {
@@ -205,11 +240,41 @@ exports.uploadPDF = async (req, res) => {
             PDF_CV_URL: result.secure_url,
         };
 
-        // Gọi hàm updateUser để cập nhật
-        req.params = { uid }; // Gán uid vào req.params để updateUser sử dụng
-        req.body = updateData; // Gán dữ liệu cần cập nhật vào req.body
-        await exports.updateUser(req, res); // Gọi hàm updateUser
+        // Cập nhật thông tin user
+        const existingUserData = existingUser.userData || {};
+        const updatedUserData = {
+            ...existingUserData,
+            ...updateData,
+            profile: {
+                ...(existingUserData.profile || {}),
+                ...(updateData.profile || {}),
+            },
+        };
+
+        await User.findOneAndUpdate({ uid }, { $set: { userData: updatedUserData } }, { new: true });
+        sendEvent("processing", { status: "completed", message: "Hoàn tất quá trình", progress: 100 });
+
+        // Hoàn thành SSE stream
+        sendEvent("done", {
+            success: true,
+            message: "Cập nhật thông tin PDF thành công!",
+            data: {
+                PDF_CV_URL: result.secure_url,
+            },
+        });
+
+        return res.end();
     } catch (error) {
+        console.error("Lỗi trong quá trình xử lý:", error);
+
+        // Gửi thông báo lỗi nếu đã thiết lập SSE
+        if (res.writeHead) {
+            res.write(`event: error\n`);
+            res.write(`data: ${JSON.stringify({ message: `Lỗi khi xử lý PDF: ${error.message}` })}\n\n`);
+            return res.end();
+        }
+
+        // Trả về lỗi thông thường nếu chưa thiết lập SSE
         res.status(500).json({ message: `Lỗi khi xử lý PDF: ${error.message}` });
     }
 };
