@@ -16,8 +16,8 @@ const promptTEXT = (profile) => {
         "recommend":  
         { 
             "DanhGia":{
-                "UuDiem": "liệt kê theo gạch đầu dòng kiểu markdown",
-                "NhuocDiem": "liệt kê theo gạch đầu dòng kiểu markdown, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.",
+                "UuDiem": " đánh giá ưu điểm của ứng viên, viết kiểu markdown",
+                "NhuocDiem": " đánh giá nhược điểm của ứng viên, viết kiểu markdown, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.",
             }
             "CanChinhSuaChiTiet": "TRƯỜNG NÀY LÀ 1 CHUỖI GỒM CÁC GẠCH ĐẦU DÒNG ĐƯỢC VIẾT BẰNG KIỂU MARKDOWN,
                 Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...:
@@ -94,34 +94,34 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
 
 "LinkedInPortfolio": link đến hồ sơ riêng nếu có.
 
-"Career_objective": một chuỗi ngắn mô tả mục tiêu nghề nghiệp của ứng viên.
+"Career_objective": Dữ liệu kiểu String trình bày thành đoạn văn (NGHIÊM CẤM TRÌNH BÀY DẠNG MẢNG HOẶC ĐỐI TƯỢNG) mô tả mục tiêu nghề nghiệp của ứng viên.
 
 "University": tên trường đại học.
 "Major": chuyên ngành đại học.
 "GPA": điểm trung bình.
 "Graduated_year": năm tốt nghiệp (hoặc dự kiến).
-"Achievements_awards": danh sách các thành tích và giải thưởng nổi bật (nếu có).
-"Extracurricular_activities": danh sách các hoạt động ngoại khóa liên quan đến công việc (nếu có).
+"Achievements_awards": các thành tích và giải thưởng nổi bật (nếu có).
+"Extracurricular_activities": các hoạt động ngoại khóa liên quan đến công việc (nếu có).
 "Interests": sở thích (nếu có).
 
 "Job_position": vị trí ứng tuyển.
 "Rank": cấp bậc.
 "Industry": loại ngành nghề.
 
-"Work_Experience": lịch sử làm việc và danh sách các công việc từ gần nhất đến xa nhất, mỗi công việc được mô tả tóm tắt bằng các điểm chính bao gồm: tên công ty, vị trí công việc, thời gian làm việc, trách nhiệm và thành tích.
+"Work_Experience": Dữ liệu kiểu String trình bày thành đoạn văn (NGHIÊM CẤM TRÌNH BÀY DẠNG MẢNG HOẶC ĐỐI TƯỢNG) mô tả lịch sử làm việc và các công việc từ gần nhất đến xa nhất, mỗi công việc được mô tả tóm tắt bằng các điểm chính bao gồm: tên công ty, vị trí công việc, thời gian làm việc, trách nhiệm và thành tích.
 "Years_of_experience": số năm kinh nghiệm (tính toán số năm kinh nghiệm tự mình, lưu ý rằng số năm kinh nghiệm trong một lĩnh vực là thời gian bạn bắt đầu làm việc tại một công ty hoặc doanh nghiệp), nếu không có thì null.
 
-"Projects": danh sách các dự án đã hoàn thành bao gồm tên dự án, công ty, công nghệ hoặc công cụ sử dụng và vị trí trong dự án, nếu có nhiều thì mô tả bằng các điểm chính và bắt buộc phải là 1 chuỗi liên tục phân tách bằng ký tự xuống dòng (\\n) kèm gạch đầu dòng.
+"Projects": Dữ liệu kiểu String trình bày thành đoạn văn (NGHIÊM CẤM TRÌNH BÀY DẠNG MẢNG HOẶC ĐỐI TƯỢNG) mô tả các dự án đã hoàn thành bao gồm tên dự án, công ty, công nghệ hoặc công cụ sử dụng và vị trí trong dự án, nếu có nhiều thì mô tả bằng các điểm chính.
 
-"Skills": danh sách các kỹ năng kỹ thuật và kỹ năng mềm, không chia thành các nhóm riêng biệt mà bắt buộc phải là 1 chuỗi liên tục phân tách bằng dấu phẩy.
+"Skills":Dữ liệu kiểu String trình bày thành đoạn văn (NGHIÊM CẤM TRÌNH BÀY DẠNG MẢNG HOẶC ĐỐI TƯỢNG) mô tả các kỹ năng kỹ thuật và kỹ năng mềm, không chia thành các nhóm riêng biệt mà bắt buộc phải là 1 chuỗi liên tục phân tách bằng dấu phẩy.
 
-"References": một chuỗi cung cấp thông tin tham chiếu.
+"References":Dữ liệu kiểu String trình bày thành đoạn văn (NGHIÊM CẤM TRÌNH BÀY DẠNG MẢNG HOẶC ĐỐI TƯỢNG) là một chuỗi cung cấp thông tin tham chiếu.
 
 **Ngoài ra, bắt buộc phải thêm các trường "review" và "recommend" bên ngoài "cvLabel". Trường "review" chứa một đoạn văn ngắn bằng tiếng Anh Mỹ tóm tắt các thông tin chính về ứng viên như tên, địa chỉ, vị trí ứng tuyển, kỹ năng, kinh nghiệm, bằng cấp hoặc chứng chỉ, giải thưởng để tôi có thể dễ dàng so sánh với mô tả công việc (JD). và "recommend" là một gợi ý để cải thiện CV tiếng Việt theo định dạng sau:**
     { 
     "DanhGia":{
-        "UuDiem": "liệt kê theo gạch đầu dòng kiểu markdown",
-        "NhuocDiem": "liệt kê theo gạch đầu dòng kiểu markdown, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.",
+        "UuDiem": " đánh giá ưu điểm về CV (không phải đánh giá ưu điểm của ứng viên), viết kiểu markdown trình bày theo từng ý chính",
+        "NhuocDiem": " đánh giá nhược điểm về CV (không phải đánh giá nhược điểm của ứng viên), viết kiểu markdown trình bày theo từng ý chính, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.",
     }
     "CanChinhSuaChiTiet": "TRƯỜNG NÀY LÀ 1 CHUỖI GỒM CÁC GẠCH ĐẦU DÒNG ĐƯỢC VIẾT BẰNG KIỂU MARKDOWN,
     Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...:
@@ -139,7 +139,7 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
 ##Yêu cầu:
 
 - Kết hợp thông tin liên quan thành một chuỗi duy nhất cho mỗi nhãn trong "cvLabel".
-
+- Phải tuân thủ kiểu dữ liệu của từng nhãn trong "cvLabel". yêu cầu object thì trả về object, yêu cầu string thì trả về string.
 - Nếu không có dữ liệu nhãn, hãy để giá trị null
 - Trường "review" không được bỏ sót bất kỳ kỹ năng nào.
 
@@ -173,7 +173,7 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
     "Industry":"Information Technology/Telecommunications",
     "Work_experience": " XYZ Company, Software Engineer, January 2020 - Present.",
     "Skills": "JavaScript, React, Node.js, Communication, Teamwork.",
-    "Projects":"programming map application at ABC Company with programming interface position using Reactjs. \n - programming map application at ABCD Company with programming interface position using Nextjs.",
+    "Projects":"programming map application at ABC Company with programming interface position using Reactjs, programming map application at ABCD Company with programming interface position using Nextjs.",
     "References": null
 },
 "review": "Candidate Nguyen Van A, born in 2000, living in Hanoi, graduated from university with an average score of 3.0, applying for the position of programmer, has 1 year of experience with reactjs, has worked working with reactjs, skilled in JavaScript, React, Node.js, Communication, Teamwork, experienced as a programmer at ABC company,...",
@@ -193,7 +193,7 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
 }`;
 
 // Danh sách các model theo thứ tự ưu tiên
-const modelName = ["gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash-lite"];
+const modelName = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash-8b"];
 
 // Khởi tạo với model đầu tiên
 let currentModelIndex = 0;
