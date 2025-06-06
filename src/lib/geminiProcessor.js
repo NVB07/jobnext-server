@@ -16,19 +16,19 @@ const promptTEXT = (profile) => {
         "recommend":  
         { 
             "DanhGia":{
-                "UuDiem": "liệt kê theo gạch đầu dòng.",
-                "NhuocDiem": "liệt kê theo gạch đầu dòng, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.",
+                "UuDiem": "liệt kê theo gạch đầu dòng kiểu markdown",
+                "NhuocDiem": "liệt kê theo gạch đầu dòng kiểu markdown, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.",
             }
-            "CanChinhSuaChiTiet": "TRƯỜNG NÀY LÀ 1 CHUỖI GỒM CÁC GẠCH ĐẦU DÒNG,
+            "CanChinhSuaChiTiet": "TRƯỜNG NÀY LÀ 1 CHUỖI GỒM CÁC GẠCH ĐẦU DÒNG ĐƯỢC VIẾT BẰNG KIỂU MARKDOWN,
                 Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...:
                 - Nếu cần chỉnh sửa thì ghi rõ "Cần chỉnh sửa thành", "Vì sao nên sửa", kèm ví dụ cụ thể nếu có.
                 - Nếu không cần chỉnh sửa thì ghi rõ "Không cần sửa".
                 - Nếu thiếu sót trường nào thì ghi rõ Thiếu trường, Nên thêm trường, Vì sao nên thêm, kèm ví dụ cụ thể nếu có.",
-            "CanThem": "Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...",
-            "LuuY":" Liệt kê các gợi ý tổng quan để cải thiện CV."
+            "CanThem": "Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,... gợi ý người dùng thêm vào CV. Trong trường này cũng viết kiểu markdown",
+            "LuuY":" Liệt kê các gợi ý tổng quan để cải thiện CV. Trong trường này cũng viết kiểu markdown"
         }
     }
-#Các nhận xét trong "recommend" càng chi tiết càng tốt, nếu có thể thì ghi rõ cụ thể ví dụ cụ thể nếu có.
+#Các nhận xét trong "recommend" càng chi tiết càng tốt, nếu có thể thì ghi rõ cụ thể ví dụ cụ thể nếu có và bắt buộc phải là tiếng Việt.
     **ví dụ dữ liệu trả về:**
     "cvLabel" : {
         "review": "Candidate Nguyen Van A, born in 2000, living in Hanoi, graduated from university with an average score of 3.0, applying for the position of programmer, has 1 year of experience with reactjs, has worked working with reactjs, skilled in JavaScript, React, Node.js, Communication, Teamwork, experienced as a programmer at ABC company,...",
@@ -111,28 +111,28 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
 "Work_Experience": lịch sử làm việc và danh sách các công việc từ gần nhất đến xa nhất, mỗi công việc được mô tả tóm tắt bằng các điểm chính bao gồm: tên công ty, vị trí công việc, thời gian làm việc, trách nhiệm và thành tích.
 "Years_of_experience": số năm kinh nghiệm (tính toán số năm kinh nghiệm tự mình, lưu ý rằng số năm kinh nghiệm trong một lĩnh vực là thời gian bạn bắt đầu làm việc tại một công ty hoặc doanh nghiệp), nếu không có thì null.
 
-"Projects": danh sách các dự án đã hoàn thành bao gồm tên dự án, công ty, công nghệ hoặc công cụ sử dụng và vị trí trong dự án, nếu có nhiều thì mô tả bằng các điểm chính.
+"Projects": danh sách các dự án đã hoàn thành bao gồm tên dự án, công ty, công nghệ hoặc công cụ sử dụng và vị trí trong dự án, nếu có nhiều thì mô tả bằng các điểm chính và bắt buộc phải là 1 chuỗi liên tục phân tách bằng ký tự xuống dòng (\\n) kèm gạch đầu dòng.
 
-"Skills": danh sách các kỹ năng kỹ thuật và kỹ năng mềm, không chia thành các nhóm riêng biệt.
+"Skills": danh sách các kỹ năng kỹ thuật và kỹ năng mềm, không chia thành các nhóm riêng biệt mà bắt buộc phải là 1 chuỗi liên tục phân tách bằng dấu phẩy.
 
 "References": một chuỗi cung cấp thông tin tham chiếu.
 
 **Ngoài ra, bắt buộc phải thêm các trường "review" và "recommend" bên ngoài "cvLabel". Trường "review" chứa một đoạn văn ngắn bằng tiếng Anh Mỹ tóm tắt các thông tin chính về ứng viên như tên, địa chỉ, vị trí ứng tuyển, kỹ năng, kinh nghiệm, bằng cấp hoặc chứng chỉ, giải thưởng để tôi có thể dễ dàng so sánh với mô tả công việc (JD). và "recommend" là một gợi ý để cải thiện CV tiếng Việt theo định dạng sau:**
     { 
     "DanhGia":{
-        "UuDiem": "liệt kê theo gạch đầu dòng.",
-        "NhuocDiem": "liệt kê theo gạch đầu dòng, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.",
+        "UuDiem": "liệt kê theo gạch đầu dòng kiểu markdown",
+        "NhuocDiem": "liệt kê theo gạch đầu dòng kiểu markdown, bao gồm cả lỗi sai chính tả, thiếu thông tin,... nếu có.",
     }
-    "CanChinhSuaChiTiet": "TRƯỜNG NÀY LÀ 1 CHUỖI GỒM CÁC GẠCH ĐẦU DÒNG,
+    "CanChinhSuaChiTiet": "TRƯỜNG NÀY LÀ 1 CHUỖI GỒM CÁC GẠCH ĐẦU DÒNG ĐƯỢC VIẾT BẰNG KIỂU MARKDOWN,
     Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...:
         - Nếu cần chỉnh sửa thì ghi rõ Cần chỉnh sửa thành, Vì sao nên sửa, kèm ví dụ cụ thể nếu có.
         - Nếu không cần chỉnh sửa thì ghi rõ Không cần sửa.
         - Nếu thiếu sót trường nào thì ghi rõ Thiếu trường, Nên thêm trường, Vì sao nên thêm, kèm ví dụ cụ thể nếu có.",
-    "CanThem": "Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,...",
-    "LuuY":" Liệt kê các gợi ý tổng quan để cải thiện CV."
+    "CanThem": "Với mỗi mục trong CV như Họ tên, Ngày sinh, Địa chỉ, Email, Mục tiêu nghề nghiệp, Học vấn, Kỹ năng, Dự án,... gợi ý người dùng thêm vào CV. Trong trường này cũng viết kiểu markdown",
+    "LuuY":" Liệt kê các gợi ý tổng quan để cải thiện CV. Trong trường này cũng viết kiểu markdown"
     }
 
-#Các nhận xét trong "recommend" càng chi tiết càng tốt, nếu có thể thì ghi rõ cụ thể ví dụ cụ thể nếu có.
+#Các nhận xét trong "recommend" càng chi tiết càng tốt, nếu có thể thì ghi rõ cụ thể ví dụ cụ thể nếu có và bắt buộc phải là tiếng Việt.
 **Bắt buộc phải tuân theo định dạng trên, chi tiết, rõ ràng, dễ đọc, Không được thay đổi định dạng tùy ý.**
 
 
@@ -173,7 +173,7 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
     "Industry":"Information Technology/Telecommunications",
     "Work_experience": " XYZ Company, Software Engineer, January 2020 - Present.",
     "Skills": "JavaScript, React, Node.js, Communication, Teamwork.",
-    "Projects":"programming map application at ABC Company with programming interface position using Reactjs.",
+    "Projects":"programming map application at ABC Company with programming interface position using Reactjs. \n - programming map application at ABCD Company with programming interface position using Nextjs.",
     "References": null
 },
 "review": "Candidate Nguyen Van A, born in 2000, living in Hanoi, graduated from university with an average score of 3.0, applying for the position of programmer, has 1 year of experience with reactjs, has worked working with reactjs, skilled in JavaScript, React, Node.js, Communication, Teamwork, experienced as a programmer at ABC company,...",
@@ -193,7 +193,7 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
 }`;
 
 // Danh sách các model theo thứ tự ưu tiên
-const modelName = ["gemini-2.0-flash", "gemini-2.0-flash-lite"];
+const modelName = ["gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash-lite"];
 
 // Khởi tạo với model đầu tiên
 let currentModelIndex = 0;

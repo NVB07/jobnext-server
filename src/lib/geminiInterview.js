@@ -2,7 +2,7 @@ const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@googl
 
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
-const modelName = ["gemini-2.0-flash", "gemini-2.5-flash-preview-04-17", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash-lite"];
+const modelName = ["gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-2.5-flash-preview-04-17", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash-lite"];
 
 // Initialize with the first model
 let currentModelIndex = 0;
