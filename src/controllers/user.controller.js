@@ -154,31 +154,8 @@ exports.uploadPDF = async (req, res) => {
 
         sendEvent("processing", { status: "checking", message: "Kiểm tra thông tin người dùng", progress: 10 });
 
-        // Xử lý xóa file cũ nếu có
-        if (existingUser.userData.PDF_CV_URL) {
-            sendEvent("processing", { status: "deleting_old", message: "Đang xóa CV cũ", progress: 20 });
-
-            // Lấy public_id từ URL
-            const urlParts = existingUser.userData.PDF_CV_URL.split("/");
-            const fileName = urlParts[urlParts.length - 1];
-            const publicId = `cv_uploads/${uid}/${fileName}`; // public_id = folder + fileName
-            console.log(publicId);
-
-            await cloudinary.uploader.destroy(publicId, { resource_type: "raw" }, (error, result) => {
-                if (error) {
-                    console.error("Lỗi khi Delete CV cũ:", error);
-                    sendEvent("processing", { status: "delete_old_failed", message: "Xóa CV cũ thất bại, tiếp tục quá trình", progress: 25 });
-                } else {
-                    console.log("Delete CV cũ thành công:", result);
-                    sendEvent("processing", { status: "delete_old_success", message: "Xóa CV cũ thành công", progress: 30 });
-                }
-            });
-        } else {
-            sendEvent("processing", { status: "no_old_cv", message: "Không có CV cũ cần xóa", progress: 30 });
-        }
-
-        // Upload file mới lên Cloudinary
-        sendEvent("processing", { status: "uploading", message: "Đang tải CV lên cloud", progress: 40 });
+        // 1. Upload file mới lên Cloudinary trước
+        sendEvent("processing", { status: "uploading", message: "Đang tải CV mới lên cloud", progress: 20 });
 
         const result = await new Promise((resolve, reject) => {
             cloudinary.uploader
@@ -189,11 +166,35 @@ exports.uploadPDF = async (req, res) => {
                 .end(req.file.buffer);
         });
 
-        sendEvent("processing", { status: "uploaded", message: "Tải CV lên cloud thành công", progress: 60 });
+        sendEvent("processing", { status: "uploaded", message: "Tải CV mới lên cloud thành công", progress: 40 });
         console.log(result);
 
-        // Xử lý Comment PDF bằng Gemini
-        sendEvent("processing", { status: "analyzing", message: "Đang phân tích CV", progress: 70 });
+        // 2. Sau khi upload thành công, xóa file cũ nếu có
+        let oldCvUrl = null;
+        if (existingUser.userData?.PDF_CV_URL) {
+            oldCvUrl = existingUser.userData.PDF_CV_URL;
+            sendEvent("processing", { status: "deleting_old", message: "Đang xóa CV cũ", progress: 50 });
+
+            try {
+                // Lấy public_id từ URL
+                const urlParts = existingUser.userData.PDF_CV_URL.split("/");
+                const fileName = urlParts[urlParts.length - 1];
+                const publicId = `cv_uploads/${uid}/${fileName}`; // public_id = folder + fileName
+                console.log("Xóa file cũ:", publicId);
+
+                await cloudinary.uploader.destroy(publicId, { resource_type: "raw" });
+                sendEvent("processing", { status: "delete_old_success", message: "Xóa CV cũ thành công", progress: 55 });
+            } catch (error) {
+                console.error("Lỗi khi Delete CV cũ:", error);
+                sendEvent("processing", { status: "delete_old_failed", message: "Xóa CV cũ thất bại, tiếp tục quá trình", progress: 55 });
+                // Tiếp tục xử lý ngay cả khi xóa file cũ thất bại
+            }
+        } else {
+            sendEvent("processing", { status: "no_old_cv", message: "Không có CV cũ cần xóa", progress: 55 });
+        }
+
+        // 3. Xử lý phân tích CV bằng Gemini
+        sendEvent("processing", { status: "analyzing", message: "Đang phân tích CV", progress: 60 });
 
         const processedText = await processWithGemini(req.file.buffer, "application/pdf", req.file.originalname);
         sendEvent("processing", { status: "analyzed", message: "Phân tích CV thành công", progress: 80 });
@@ -260,6 +261,7 @@ exports.uploadPDF = async (req, res) => {
             message: "Cập nhật thông tin PDF thành công!",
             data: {
                 PDF_CV_URL: result.secure_url,
+                oldCvUrl: oldCvUrl,
             },
         });
 
