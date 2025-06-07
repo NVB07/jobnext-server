@@ -81,8 +81,6 @@ exports.updateUser = async (req, res) => {
         const processedText = await processWithGeminiText(updateData?.profile);
         const jsonString = jsonrepair(processedText);
         const parseData = JSON.parse(jsonString);
-        console.log(parseData);
-        console.log("processedText//////////", processedText);
 
         const existingUserData = user.userData || {};
         const updatedUserData = {

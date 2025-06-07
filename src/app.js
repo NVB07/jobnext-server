@@ -9,26 +9,44 @@ const { initializeModel } = require("./lib/matchJobNLP");
 const { runCrawlJobs } = require("./admin.controller/admin.crawl.controller");
 const cloudinary = require("cloudinary").v2;
 
-cron.schedule("*/10 * * * *", async () => {
-    console.log("🔍 Kiểm tra & xóa user chưa xác minh...");
-    await deleteUnverifiedUsers();
-});
+cron.schedule(
+    "*/10 * * * *",
+    async () => {
+        console.log("🔍 Kiểm tra & xóa user chưa xác minh...");
+        await deleteUnverifiedUsers();
+    },
+    {
+        timezone: "Asia/Ho_Chi_Minh",
+    }
+);
 
-cron.schedule("0 0 * * *", async () => {
-    console.log("🕛 00:00 - bắt đầu kiểm tra & xóa job hết hạn...");
-    await deleteExpiredJobs();
-});
+cron.schedule(
+    "0 0 * * *",
+    async () => {
+        console.log("🕛 00:00 - bắt đầu kiểm tra & xóa job hết hạn...");
+        await deleteExpiredJobs();
+    },
+    {
+        timezone: "Asia/Ho_Chi_Minh",
+    }
+);
 
 // Cron job chạy crawl job vào 0h hàng ngày
-cron.schedule("0 0 * * *", async () => {
-    console.log("🕛 00:00 - bắt đầu crawl jobs từ VietnamWorks...");
-    try {
-        await runCrawlJobs();
-        console.log("✅ Crawl jobs hoàn thành!");
-    } catch (error) {
-        console.error("❌ Lỗi khi crawl jobs:", error.message);
+cron.schedule(
+    "0 0 * * *",
+    async () => {
+        console.log("🕛 00:00 - bắt đầu crawl jobs từ VietnamWorks...");
+        try {
+            await runCrawlJobs();
+            console.log("✅ Crawl jobs hoàn thành!");
+        } catch (error) {
+            console.error("❌ Lỗi khi crawl jobs:", error.message);
+        }
+    },
+    {
+        timezone: "Asia/Ho_Chi_Minh",
     }
-});
+);
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

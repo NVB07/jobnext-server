@@ -88,7 +88,7 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
 
 "Phone_number": số điện thoại.
 
-"Address": địa chỉ làm việc, chuẩn hóa địa chỉ như "Hà Nội" thay vì "hanoi" hoặc "TP Hồ Chí Minh" thay vì "HCM" hoặc "HoChiMinh" (chỉ lấy đơn vị tỉnh, thường địa chỉ trên CV sẽ là địa chỉ làm việc).
+"Address": địa chỉ làm việc, phải chỉ chứa một trong các giá trị sau : "An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu","Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước","Bình Thuận","Cà Mau","Cần Thơ","Cao Bằng","Đà Nẵng","Đắk Lắk","Đắk Nông","Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang","Hà Nam","Hà Nội","Hồ Chí Minh","Hà Tĩnh","Hải Dương","Hải Phòng","Hậu Giang","Hòa Bình","Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu","Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định","Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên","Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị","Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên","Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang","Vĩnh Long","Vĩnh Phúc","Yên Bái","International","Other".
 
 "Email": email.
 
@@ -108,8 +108,8 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
 "Rank": cấp bậc.
 "Industry": loại ngành nghề.
 
-"Work_Experience": Dữ liệu kiểu String trình bày thành đoạn văn (NGHIÊM CẤM TRÌNH BÀY DẠNG MẢNG HOẶC ĐỐI TƯỢNG) mô tả lịch sử làm việc và các công việc từ gần nhất đến xa nhất, mỗi công việc được mô tả tóm tắt bằng các điểm chính bao gồm: tên công ty, vị trí công việc, thời gian làm việc, trách nhiệm và thành tích.
-"Years_of_experience": số năm kinh nghiệm (tính toán số năm kinh nghiệm tự mình, lưu ý rằng số năm kinh nghiệm trong một lĩnh vực là thời gian bạn bắt đầu làm việc tại một công ty hoặc doanh nghiệp), nếu không có thì null.
+"Work_Experience": Dữ liệu kiểu String trình bày thành đoạn văn về kinh nghiệm làm việc tại các công ty (NGHIÊM CẤM TRÌNH BÀY DẠNG MẢNG HOẶC ĐỐI TƯỢNG) mô tả lịch sử làm việc và các công việc từ gần nhất đến xa nhất, mỗi công việc được mô tả tóm tắt bằng các điểm chính bao gồm: tên công ty, vị trí công việc, thời gian làm việc, trách nhiệm và thành tích , nếu không làm việc cho công ty nào thì để null.
+"Years_of_experience": số năm kinh nghiệm (tính toán số năm kinh nghiệm tự mình, lưu ý rằng số năm kinh nghiệm trong một lĩnh vực là thời gian bạn bắt đầu làm việc tại một công ty hoặc doanh nghiệp), nếu không có thì null .
 
 "Projects": Dữ liệu kiểu String trình bày thành đoạn văn (NGHIÊM CẤM TRÌNH BÀY DẠNG MẢNG HOẶC ĐỐI TƯỢNG) mô tả các dự án đã hoàn thành bao gồm tên dự án, công ty, công nghệ hoặc công cụ sử dụng và vị trí trong dự án, nếu có nhiều thì mô tả bằng các điểm chính.
 
@@ -134,6 +134,7 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
 
 #Các nhận xét trong "recommend" càng chi tiết càng tốt, nếu có thể thì ghi rõ cụ thể ví dụ cụ thể nếu có và bắt buộc phải là tiếng Việt.
 **Bắt buộc phải tuân theo định dạng trên, chi tiết, rõ ràng, dễ đọc, Không được thay đổi định dạng tùy ý.**
+**Không được nhận xét tên trường nguyên gốc, chỉ nhận xét tên trường đã được chuyển đổi sang tiếng Việt, ví dụ đối với Work_Experience thì nhận xét là Kinh nghiệm làm việc, không nhận xét là Work_Experience.**
 
 
 ##Yêu cầu:
@@ -155,7 +156,7 @@ const promptPDF = `Bạn là chuyên gia nhân sự. Nhiệm vụ của bạn l�
 {
 "cvLabel": {
     "Name": "Nguyen Van A",
-    "DOB": "2000".
+    "DOB": "20/01/2000".
     "Address":"hanoi",
     "Phone_number":"0123456789",
     "Email":"example@gmail.com",
