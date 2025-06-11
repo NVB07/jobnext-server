@@ -272,3 +272,69 @@ exports.deleteInterview = async (req, res) => {
         });
     }
 };
+
+exports.restartInterview = async (req, res) => {
+    try {
+        const { interviewId } = req.params;
+        const uid = req.user.uid;
+
+        if (!interviewId || !uid) {
+            return res.status(400).json({
+                success: false,
+                message: "Thiếu interviewId hoặc uid",
+            });
+        }
+
+        // Tìm interview và kiểm tra quyền sở hữu
+        const interview = await Interview.findById(interviewId);
+
+        if (!interview) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy phỏng vấn!",
+            });
+        }
+
+        if (interview.uid !== uid) {
+            return res.status(403).json({
+                success: false,
+                message: "Không có quyền truy cập phỏng vấn này!",
+            });
+        }
+
+        // Tạo prompt mới với thông tin hiện tại
+        const prompt = createPromt(interview.jobRequirement, interview.candidateDescription, interview.jobTitle, interview.skills);
+
+        // Reset chatHistory và tạo lại câu hỏi đầu tiên
+        const chatHistory = [
+            {
+                role: "user",
+                parts: [{ text: prompt }],
+            },
+        ];
+
+        const result = await createInterview(prompt);
+        chatHistory.push({
+            role: "model",
+            parts: [{ text: result }],
+        });
+
+        // Cập nhật interview với chatHistory mới
+        interview.chatHistory = chatHistory;
+        await interview.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Đã khởi động lại phỏng vấn thành công!",
+            result,
+            interviewId: interview._id,
+        });
+    } catch (error) {
+        console.error("Lỗi khi restart phỏng vấn:", error);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi server khi restart phỏng vấn",
+            error: error.message,
+        });
+    }
+};

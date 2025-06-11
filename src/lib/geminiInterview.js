@@ -2,7 +2,7 @@ const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@googl
 
 const apiKey = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(apiKey);
-const modelName = ["gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-2.5-flash-preview-04-17", "gemini-2.5-flash-preview-05-20", "gemini-2.0-flash-lite"];
+const modelName = ["gemini-2.0-flash", "gemini-2.5-flash-preview-04-17", "gemini-2.5-flash-preview-05-20", "gemini-1.5-flash-8b", "gemini-2.0-flash-lite"];
 
 // Initialize with the first model
 let currentModelIndex = 0;
@@ -20,6 +20,12 @@ const generationConfig = {
 };
 
 async function createInterview(promt, history = []) {
+    // Reset về model đầu tiên cho mỗi lần gọi mới
+    currentModelIndex = 0;
+    model = genAI.getGenerativeModel({
+        model: modelName[currentModelIndex],
+    });
+
     let attempts = 0;
     let maxAttempts = modelName.length;
 
@@ -33,6 +39,7 @@ async function createInterview(promt, history = []) {
 
             const result = await chatSession.sendMessage(promt);
             console.log(`Success with model: ${modelName[currentModelIndex]}`);
+
             return result.response.text();
         } catch (error) {
             console.error(`Error with model ${modelName[currentModelIndex]}: ${error.message}`);
