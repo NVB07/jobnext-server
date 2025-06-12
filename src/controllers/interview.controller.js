@@ -185,13 +185,10 @@ exports.getInterviewByJobRequirement = async (req, res) => {
             });
         }
 
-        let interview = await Interview.findOne({ jobRequirement });
+        let interview = await Interview.findOne({ jobRequirement, uid });
 
         if (!interview) {
             return res.status(200).json({ state: false, message: "Không tìm thấy interview", result: null, interviewId: null });
-        }
-        if (interview.uid !== uid) {
-            return res.status(403).json({ message: "Không có quyền truy cập tài liệu này" });
         }
 
         res.status(200).json({
