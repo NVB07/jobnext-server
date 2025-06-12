@@ -83,7 +83,7 @@ exports.deleteJob = async (req, res) => {
 
 exports.searchJobsNoMatch = async (req, res) => {
     try {
-        const { skill, location, category, jobLevel, uid } = req.body;
+        const { skill, location, category, jobLevel, jobSource, uid } = req.body;
         let query = {};
         const user = await User.findById(uid);
         const savedJobs = user?.savedJobs || [];
@@ -106,6 +106,10 @@ exports.searchJobsNoMatch = async (req, res) => {
         if (jobLevel) {
             // Use exact match for jobLevel instead of regex pattern
             query.jobLevel = jobLevel;
+        }
+        if (jobSource) {
+            // Use exact match for jobSource
+            query.jobSource = jobSource;
         }
         console.log(query);
         // Lấy tham số phân trang từ query, mặc định page = 1, perPage = 10
